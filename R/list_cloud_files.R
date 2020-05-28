@@ -14,20 +14,25 @@ if (FALSE)
 # list_cloud_folder ------------------------------------------------------------
 list_cloud_folder <- function(folder, user, password)
 {
+  if (FALSE) {
+    folder = "proposals/bmbf_digital/Previous-projects/Budget/10_Filled_out_forms"
+    user = Sys.getenv("NEXTCLOUD_USER")
+    password = Sys.getenv("NEXTCLOUD_PASSWORD")
+  }
+
   dictionary <- list(
-    dav = "https://<user>:<password>@cloud.kompetenz-wasser.de/remote.php/dav",
+    dav = "https://cloud.kompetenz-wasser.de/remote.php/dav",
     url_files = "<dav>/files/<user>/<folder>",
     url_versions = "<dav>/versions/<user>/<fileid>"
   )
 
-  strings <- kwb.utils::resolve(
-    dictionary,
-    user = user,
-    password = password,
-    folder = folder
-  )
+  strings <- kwb.utils::resolve(dictionary, user = user, folder = folder)
 
-  response <- httr::VERB("PROPFIND", strings$url_files)
+  variables <- c("NEXTCLOUD_USER", "NEXTCLOUD_PASSWORD")
+
+  config <- do.call(httr::authenticate, unname(as.list(Sys.getenv(variables))))
+
+  response <- httr::VERB("PROPFIND", strings$url_files, config)
 
   content <- httr::content(response, as = "parsed")
 
