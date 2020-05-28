@@ -31,3 +31,5 @@ usethis::use_vignette("Tutorial")
 
 
 kwb.pkgbuild::use_autopkgdown("kwb.budget")
+
+kwb.pkgbuild::create_empty_branch_ghpages("kwb.budget")
