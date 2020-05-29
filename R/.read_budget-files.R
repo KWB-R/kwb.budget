@@ -35,7 +35,17 @@ if (FALSE)
   file <- path.expand(downloaded_files[1])
 
   kwb.db::hsTables(file)
+
+  region_name <- "range_contact"
+  region_data_1 <- kwb.db::hsGetTable(file, region_name, stringsAsFactors = FALSE)
+
   openxlsx::getNamedRegions(file)
+  region_data_2 <- openxlsx::read.xlsx(file, namedRegion = region_name)
+
+  str(region_data_1)
+  str(region_data_2)
+
+  diffobj::diffStr(region_data_1, region_data_2)
 }
 
 # DATA PREPARATION -------------------------------------------------------------
