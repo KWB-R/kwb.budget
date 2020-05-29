@@ -22,15 +22,17 @@ if (FALSE)
   View(file_info)
 
   # Sum of file sizes = folder size?
-  sum(file_info$size) == file_info$bytes[1]
+  sum(file_info$size[-1]) == file_info$size[1]
 
   # Filter for xlsx files
-  paths <- grep("\\.xlsx", file_info$href, value = TRUE)
+  xls_paths <- grep("\\.xlsx", file_info$href, value = TRUE)
 
-  paths <- gsub(sprintf("/remote.php/dav/files/%s/", kwb.nextcloud:::nextcloud_user()) , "", paths)
+  #paths <- gsub(sprintf("/remote.php/dav/files/%s/", kwb.nextcloud:::nextcloud_user()) , "", paths)
+
+  full_paths <- file.path(kwb.utils::getAttribute(file_info, "root"), xls_paths)
 
   # Download xlsx files
-  downloaded_files <- kwb.nextcloud:::download_files(paths)
+  downloaded_files <- kwb.nextcloud:::download_files(paths = full_paths)
 
   download_dir <- dirname(downloaded_files[1])
   kwb.utils::hsOpenWindowsExplorer(download_dir)
