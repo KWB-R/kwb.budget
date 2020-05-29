@@ -32,7 +32,9 @@ if (FALSE)
   full_paths <- file.path(kwb.utils::getAttribute(file_info, "root"), xls_paths)
 
   # Download xlsx files
-  downloaded_files <- kwb.nextcloud:::download_files(paths = full_paths)
+  system.time(
+    downloaded_files <- kwb.nextcloud:::download_files(paths = full_paths)
+  )
 
   download_dir <- dirname(downloaded_files[1])
   kwb.utils::hsOpenWindowsExplorer(download_dir)
@@ -52,7 +54,6 @@ if (FALSE)
     kwb.db::hsGetTable(file, x, stringsAsFactors = FALSE)
     #)
   }
-
 
   # Read cell region, method 2: using openxlsx
   read_region_2 <- function(x) {
