@@ -34,18 +34,35 @@ if (FALSE)
 
   file <- path.expand(downloaded_files[1])
 
-  kwb.db::hsTables(file)
+  grep_range <- function(x) grep("^range_", x, value = TRUE)
 
-  region_name <- "range_contact"
-  region_data_1 <- kwb.db::hsGetTable(file, region_name, stringsAsFactors = FALSE)
+  region_names_1 <- grep_range(kwb.db::hsTables(file))
+  region_names_2 <- grep_range(openxlsx::getNamedRegions(file))
 
-  openxlsx::getNamedRegions(file)
-  region_data_2 <- openxlsx::read.xlsx(file, namedRegion = region_name)
+  identical(region_names_1, region_names_2)
 
-  str(region_data_1)
-  str(region_data_2)
+  # Read cell region, method 1: using RODBC
+  read_region_1 <- function(x) {
+    #kwb.utils::removeEmptyColumns(
+    kwb.db::hsGetTable(file, x, stringsAsFactors = FALSE)
+    #)
+  }
 
-  diffobj::diffStr(region_data_1, region_data_2)
+
+  # Read cell region, method 2: using openxlsx
+  read_region_2 <- function(x) {
+    openxlsx::read.xlsx(
+      file, namedRegion = x, skipEmptyCols = FALSE, sep.names = " "
+    )
+  }
+
+  # All region names
+  (region_names <- region_names_1)
+
+  regions_data_1 <- lapply(region_names, read_region_1)
+  regions_data_2 <- lapply(region_names, read_region_2)
+
+  diffobj::diffStr(regions_data_1, regions_data_2)
 }
 
 # DATA PREPARATION -------------------------------------------------------------
