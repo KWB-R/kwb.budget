@@ -102,7 +102,7 @@ read_partner_budget_from_excel <- function(file, dbg = TRUE)
 
 get_named_excel_ranges <- function(file)
 {
-  region_names <- openxlsx::getNamedRegions(file)
+  region_names <- as.character(openxlsx::getNamedRegions(file))
 
   ranges <- lapply(stats::setNames(nm = region_names), function(name) {
     try(
