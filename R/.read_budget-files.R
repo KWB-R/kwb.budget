@@ -38,17 +38,32 @@ if (FALSE)
 
   download_dir <- dirname(downloaded_files[1])
   kwb.utils::hsOpenWindowsExplorer(download_dir)
+}
 
+# Test reading files -----------------------------------------------------------
+if (FALSE)
+{
+  # Define the path to an Excel file to read
   #file <- "C:/Users/hsonne/Documents/../Downloads/nextcloud_3d5c2c853fd2/DWC_Partner_Budget_Arctik_FINAL.xlsx"
-  file <- path.expand(downloaded_files[1])
+  #file <- path.expand(downloaded_files[1])
 
-  kwb.budget:::read_partner_budget_from_excel(file)
+  # Try to read the whole file
+  files <- dir(
+    "C:/Users/hsonne/Documents/../Downloads/nextcloud_3d5c2c853fd2", "xlsx$",
+    full.names = TRUE
+  )
 
+  for (file in files) {
+    print(file)
+    kwb.budget:::read_partner_budget_from_excel(file)
+  }
+
+  # Show available ranges named "range_..."
   grep_range <- function(x) grep("^range_", x, value = TRUE)
-
   region_names_1 <- grep_range(kwb.db::hsTables(file))
   region_names_2 <- grep_range(openxlsx::getNamedRegions(file))
 
+  # Same ranges with both methods?
   identical(region_names_1, region_names_2)
 
   # Read cell region, method 1: using RODBC
