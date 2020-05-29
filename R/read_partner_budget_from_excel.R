@@ -16,6 +16,13 @@ read_partner_budget_from_excel <- function(file, dbg = TRUE)
 
   ranges <- get_named_excel_ranges(file)
 
+  failed <- sapply(ranges, inherits, "try-error")
+
+  if (any(failed)) warning(
+    "The following named range(s) could not be read: ",
+    kwb.utils::stringList(names(which(failed)))
+  )
+
   general <- rbind(ranges$range_partner, ranges$range_contact)
 
   general <- kwb.utils::toLookupTable(general$Key, general$Value)
@@ -104,7 +111,7 @@ get_named_excel_ranges <- function(file)
 {
   region_names <- openxlsx::getNamedRegions(file)
 
-  lapply(region_names, function(name) {
+  lapply(stats::setNames(nm = region_names), function(name) {
     try(openxlsx::read.xlsx(file, namedRegion = name))
   })
 }
