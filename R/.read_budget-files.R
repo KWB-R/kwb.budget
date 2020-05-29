@@ -1,7 +1,7 @@
-# devtools::install_github("kwb-r/kwb.utils")
-# devtools::install_github("kwb-r/kwb.db")
-# kwb.package::updateKwbPackages("kwb.db")
-# kwb.package::updateKwbPackages("kwb.utils")
+# remotes::install_github("kwb-r/kwb.utils")
+# remotes::install_github("kwb-r/kwb.db")
+# remotes::install_github("kwb-r/kwb.nextcloud@dev")
+
 library(dplyr)
 library(kwb.utils)
 
