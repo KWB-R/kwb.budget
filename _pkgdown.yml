@@ -5,11 +5,14 @@ authors:
     href: https://www.kompetenz-wasser.de
     html: <img src='https://www.kompetenz-wasser.de/wp-content/uploads/2017/08/cropped-logo-kwb_klein-new.png'
       height='24' />
+
 template:
+  params:
     bootswatch: cerulean
     docsearch:
       api_key: 5d733eb1afca24aa4814a1f5790b2d50
       index_name: kwb_budget
+
 development:
   mode: auto
 
