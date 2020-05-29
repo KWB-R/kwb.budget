@@ -1,7 +1,7 @@
-# devtools::install_github("kwb-r/kwb.utils")
-# devtools::install_github("kwb-r/kwb.db")
-# kwb.package::updateKwbPackages("kwb.db")
-# kwb.package::updateKwbPackages("kwb.utils")
+# remotes::install_github("kwb-r/kwb.utils")
+# remotes::install_github("kwb-r/kwb.db")
+# remotes::install_github("kwb-r/kwb.nextcloud@dev")
+
 library(dplyr)
 library(kwb.utils)
 
@@ -22,26 +22,48 @@ if (FALSE)
   View(file_info)
 
   # Sum of file sizes = folder size?
-  sum(file_info$size) == file_info$bytes[1]
+  sum(file_info$size[-1]) == file_info$size[1]
 
   # Filter for xlsx files
-  paths <- grep("\\.xlsx", file_info$href, value = TRUE)
+  xls_paths <- grep("\\.xlsx", file_info$href, value = TRUE)
 
-  paths <- gsub(sprintf("/remote.php/dav/files/%s/", kwb.nextcloud:::nextcloud_user()) , "", paths)
+  #paths <- gsub(sprintf("/remote.php/dav/files/%s/", kwb.nextcloud:::nextcloud_user()) , "", paths)
+
+  full_paths <- file.path(kwb.utils::getAttribute(file_info, "root"), xls_paths)
 
   # Download xlsx files
-  downloaded_files <- kwb.nextcloud:::download_files(paths)
+  system.time(
+    downloaded_files <- kwb.nextcloud:::download_files(paths = full_paths)
+  )
 
   download_dir <- dirname(downloaded_files[1])
   kwb.utils::hsOpenWindowsExplorer(download_dir)
+}
 
-  file <- path.expand(downloaded_files[1])
+# Test reading files -----------------------------------------------------------
+if (FALSE)
+{
+  # Define the path to an Excel file to read
+  #file <- "C:/Users/hsonne/Documents/../Downloads/nextcloud_3d5c2c853fd2/DWC_Partner_Budget_Arctik_FINAL.xlsx"
+  #file <- path.expand(downloaded_files[1])
 
+  # Try to read the whole file
+  files <- dir(
+    "C:/Users/hsonne/Documents/../Downloads/nextcloud_3d5c2c853fd2", "xlsx$",
+    full.names = TRUE
+  )
+
+  for (file in files) {
+    print(file)
+    kwb.budget:::read_partner_budget_from_excel(file)
+  }
+
+  # Show available ranges named "range_..."
   grep_range <- function(x) grep("^range_", x, value = TRUE)
-
   region_names_1 <- grep_range(kwb.db::hsTables(file))
   region_names_2 <- grep_range(openxlsx::getNamedRegions(file))
 
+  # Same ranges with both methods?
   identical(region_names_1, region_names_2)
 
   # Read cell region, method 1: using RODBC
@@ -50,7 +72,6 @@ if (FALSE)
     kwb.db::hsGetTable(file, x, stringsAsFactors = FALSE)
     #)
   }
-
 
   # Read cell region, method 2: using openxlsx
   read_region_2 <- function(x) {

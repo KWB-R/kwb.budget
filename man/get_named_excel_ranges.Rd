@@ -7,7 +7,7 @@
 get_named_excel_ranges(file)
 }
 \arguments{
-\item{file}{}
+\item{file}{full path to EXCEL file}
 }
 \value{
 named Excel ranges
