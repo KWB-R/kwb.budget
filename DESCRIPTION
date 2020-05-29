@@ -27,7 +27,8 @@ LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.0
 Imports:
-    kwb.utils (>= 0.5.1)
+    kwb.utils (>= 0.5.1),
+    openxlsx (>= 4.1.4)
 Remotes:
     github::kwb-r/kwb.utils@v0.5.1
 Suggests: 
