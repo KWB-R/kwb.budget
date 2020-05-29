@@ -8,6 +8,7 @@
 #'
 read_partner_budget_from_excel <- function(file, dbg = TRUE)
 {
+  #kwb.utils::assignPackageObjects("kwb.budget")
   #kwb.utils::assignArgumentDefaults(read_partner_budget_from_excel)
 
   #file <- files[1]
@@ -58,31 +59,31 @@ read_partner_budget_from_excel <- function(file, dbg = TRUE)
 
   personnel <- kwb.utils::removeColumns(
     kwb.utils::setColumns(personnel, wp = 1:7),
-    columnsToRemove = "wp_name"
+    columns = "wp_name"
   )
 
   (consumables <- kwb.utils::renameAndSelect(ranges$range_consumables, list(
     "Position" = "position",
     #"Item" = "item",
-    "WP " = "wp",
+    "WP" = "wp",
     "Cost (EUR)" = "cost"
   )))
 
   (equipment <- kwb.utils::renameAndSelect(ranges$range_equipment, list(
     "Position" = "position",
     #"Description_Please specify type, may also comprise existing equi" = "item",
-    "WP " = "wp",
-    "(A/B)*C*D_Eligible Cost_(EUR)" = "cost",
-    "(A)_Total Cost_(EUR)"= "total_cost",
-    "(B)_Period of depreciation_(Months)" = "months_depreciation",
-    "(C)_Period of use_(Months)" = "months_usage",
-    "(D)_Usage in the project_(%)" = "percent_usage"
+    "WP" = "wp",
+    "(A/B)*C*D Eligible Cost (EUR)" = "cost",
+    "(A) Total Cost (EUR)"= "total_cost",
+    "(B) Period of depreciation (Months)" = "months_depreciation",
+    "(C) Period of use (Months)" = "months_usage",
+    "(D) Usage in the project (%)" = "percent_usage"
   )))
 
   (subcontracting <- kwb.utils::renameAndSelect(ranges$range_subcontracting, list(
     "Position" = "position",
     #"Task Subcontracted" = "item",
-    "WP " = "wp",
+    "WP" = "wp",
     "Cost (EUR)" = "cost"
   )))
 
@@ -112,6 +113,6 @@ get_named_excel_ranges <- function(file)
   region_names <- openxlsx::getNamedRegions(file)
 
   lapply(stats::setNames(nm = region_names), function(name) {
-    try(openxlsx::read.xlsx(file, namedRegion = name))
+    try(openxlsx::read.xlsx(file, namedRegion = name, sep.names = " "))
   })
 }
