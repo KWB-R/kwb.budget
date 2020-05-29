@@ -8,7 +8,7 @@ library(kwb.utils)
 # define folder for bugdet related files
 #folder_bugdet <- "//servername/projekte$/PLANNING_PROJECTS/H2020_2018_Digital/Stage 2/60_Budget/"
 #folder_bugdet <- "C:/Users/username/Desktop/H2020_2018_Digital/Stage 2/60_Budget/"
-folder_bugdet <- "//servername/projekte$/PLANNING_PROJECTS/H2020_2018_Digital/Stage 3 GA/50_Bugdet/"
+#folder_bugdet <- "//servername/projekte$/PLANNING_PROJECTS/H2020_2018_Digital/Stage 3 GA/50_Bugdet/"
 
 # List and download nextcloud files --------------------------------------------
 if (FALSE)
@@ -19,18 +19,21 @@ if (FALSE)
   file_info <- kwb.nextcloud:::list_files(path = path)
 
   # Check the result
-  #View(file_info)
+  View(file_info)
 
   # Sum of file sizes = folder size?
   sum(file_info$size) == file_info$bytes[1]
 
   # Filter for xlsx files
-  paths <- grep("\\.xlsx", file_info$path, value = TRUE)
+  paths <- grep("\\.xlsx", file_info$href, value = TRUE)
+
+  paths <- gsub(sprintf("/remote.php/dav/files/%s/", kwb.nextcloud:::nextcloud_user()) , "", paths)
 
   # Download xlsx files
   downloaded_files <- kwb.nextcloud:::download_files(paths)
 
-  kwb.utils::hsOpenWindowsExplorer(dirname(downloaded_files[1]))
+  download_dir <- dirname(downloaded_files[1])
+  kwb.utils::hsOpenWindowsExplorer(download_dir)
 
   file <- path.expand(downloaded_files[1])
 
@@ -60,7 +63,7 @@ if (FALSE)
   (region_names <- region_names_1)
 
   regions_data_1 <- lapply(region_names, read_region_1)
-  regions_data_2 <- lapply(region_names, read_region_2)
+  regions_data_2 <- lapply(region_names_2, read_region_2)
 
   diffobj::diffStr(regions_data_1, regions_data_2)
 }
@@ -68,8 +71,9 @@ if (FALSE)
 # DATA PREPARATION -------------------------------------------------------------
 if (FALSE)
 {
+
   # input costs files
-  files <- dir(paste0(folder_bugdet, "10_Filled_out_forms"), "xlsx$",
+  files <- dir(download_dir, "xlsx$",
                full.names = TRUE, all.files = FALSE)
 
   # get costs data from input files
@@ -78,7 +82,7 @@ if (FALSE)
     #i=1
     file <- files[i]
     message(sprintf("Reading '%s' (%d/%d)...", basename(file), i, length(files)))
-    try(read_partner_budget_from_excel(file))
+    try(kwb.budget::read_partner_budget_from_excel(file))
 
 
   }))

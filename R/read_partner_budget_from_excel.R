@@ -1,13 +1,20 @@
-# read_partner_budget_from_excel -----------------------------------------------
+#' Read Partner Budget From Excel File
+#'
+#' @param file full path to EXCEL file
+#' @param dbg debug message (default: TRUE)
+#' @return list with imported EXCEL budget file data
+#' @export
+#' @importFrom kwb.utils noFactorDataFrame renameAndSelect removeColumns toLookupTable
+#'
 read_partner_budget_from_excel <- function(file, dbg = TRUE)
 {
   #kwb.utils::assignArgumentDefaults(read_partner_budget_from_excel)
 
   #file <- files[1]
 
-  ranges <- kwb.db:::getNamedExcelRanges(file)
+  #ranges <- kwb.db:::getNamedExcelRanges(file)
 
-  ranges2 <- get_named_excel_ranges(file)
+  ranges <- get_named_excel_ranges(file)
 
   general <- rbind(ranges$range_partner, ranges$range_contact)
 
@@ -85,7 +92,14 @@ read_partner_budget_from_excel <- function(file, dbg = TRUE)
   )
 }
 
-# get_named_excel_ranges -------------------------------------------------------
+#' Helper function: get named Excel ranges
+#'
+#' @param file full path to EXCEL file
+#'
+#' @return named Excel ranges
+#' @export
+#' @importFrom openxlsx getNamedRegions read.xlsx
+
 get_named_excel_ranges <- function(file)
 {
   region_names <- openxlsx::getNamedRegions(file)
