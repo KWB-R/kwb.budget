@@ -13,10 +13,28 @@ library(kwb.utils)
 # List and download nextcloud files --------------------------------------------
 if (FALSE)
 {
-  path <- "proposals/bmbf_digital/Previous-projects/Budget/10_Filled_out_forms"
+  path <- "proposals/bmbf_digital/Previous-projects/Budget"
 
   # List files in folder
   file_info <- kwb.nextcloud:::list_files(path = path)
+
+
+  cloud_files <- kwb.utils::listToDepth(
+    "proposals/h2020_covid/60_Budget", FUN = kwb.nextcloud:::list_files,
+    recursive = TRUE
+    , max_depth = 3
+    , full_info = TRUE
+  )
+
+  cloud_files_decoded <- unlist(lapply(cloud_files$file, function(x) {
+    iconv(utils::URLdecode(x), from = "UTF-8", to = "latin1")
+  }))
+
+  tail(cloud_files_decoded)
+
+  View(result)
+
+  info <- kwb.nextcloud:::list_files("projects/finale/FinAdminKomm")
 
   # Check the result
   View(file_info)
@@ -49,10 +67,11 @@ if (FALSE)
 
   # Try to read the whole file
   files <- dir(
-    "C:/Users/hsonne/Documents/../Downloads/nextcloud_3d5c2c853fd2", "xlsx$",
+    "C:/Users/micha/Documents/../Downloads/nextcloud_38c41c3e466b/", "DWC_.*xlsx$",
     full.names = TRUE
   )
 
+  parallel::
   for (file in files) {
     print(file)
     kwb.budget:::read_partner_budget_from_excel(file)
@@ -107,6 +126,21 @@ if (FALSE)
 
 
   }))
+
+  # parallel get costs data from input files
+  ncores <- parallel::detectCores()
+  parallel::makeCluster(ncores)
+  system.time(costs_list <- lapply(seq_along(files), function(i) {
+
+    #i=1
+    file <- files[i]
+    message(sprintf("Reading '%s' (%d/%d)...", basename(file), i, length(files)))
+    try(kwb.budget::read_partner_budget_from_excel(file))
+
+
+  }))
+
+
 
   # check if errors
   has_error <- sapply(costs_list, inherits, "try-error")
