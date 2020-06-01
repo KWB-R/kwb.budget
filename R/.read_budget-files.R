@@ -25,7 +25,7 @@ if (FALSE)
   sum(file_info$size[-1]) == file_info$size[1]
 
   # Filter for xlsx files
-  xls_paths <- grep("\\.xlsx", file_info$href, value = TRUE)
+  xls_paths <- grep("\\.xlsx", file_info$file, value = TRUE)
 
   #paths <- gsub(sprintf("/remote.php/dav/files/%s/", kwb.nextcloud:::nextcloud_user()) , "", paths)
 
