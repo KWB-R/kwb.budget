@@ -14,47 +14,30 @@ library(kwb.utils)
 if (FALSE)
 {
   path <- "proposals/bmbf_digital/Previous-projects/Budget"
+  #path <- "proposals/h2020_covid/60_Budget"
 
-  # List files in folder
-  file_info <- kwb.nextcloud:::list_files(path = path)
-
-
-  cloud_files <- kwb.utils::listToDepth(
-    "proposals/h2020_covid/60_Budget", FUN = kwb.nextcloud:::list_files,
-    recursive = TRUE
-    , max_depth = 3
-    , full_info = TRUE
+  # List files recursively (only xlsx or csv files)
+  file_info <- kwb.nextcloud::list_files(
+    path = path,
+    pattern = "(xlsx|csv)$",
+    recursive = TRUE,
+    full_info = TRUE
   )
-
-  cloud_files_decoded <- unlist(lapply(cloud_files$file, function(x) {
-    iconv(utils::URLdecode(x), from = "UTF-8", to = "latin1")
-  }))
-
-  tail(cloud_files_decoded)
-
-  View(result)
-
-  info <- kwb.nextcloud:::list_files("projects/finale/FinAdminKomm")
 
   # Check the result
   View(file_info)
 
-  # Sum of file sizes = folder size?
-  sum(file_info$size[-1]) == file_info$size[1]
+  # Provide the full paths by prepending the root path
+  full_paths <- file.path(
+    kwb.utils::getAttribute(file_info, "root"), file_info$file
+  )
 
-  # Filter for xlsx files
-  xls_paths <- grep("\\.xlsx", file_info$file, value = TRUE)
-
-  #paths <- gsub(sprintf("/remote.php/dav/files/%s/", kwb.nextcloud:::nextcloud_user()) , "", paths)
-
-  full_paths <- file.path(kwb.utils::getAttribute(file_info, "root"), xls_paths)
-
-  # Download xlsx files
+  # Download the corresponding files to a temp folder below ~/../Downloads
   system.time(
     downloaded_files <- kwb.nextcloud:::download_files(paths = full_paths)
   )
 
-  download_dir <- dirname(downloaded_files[1])
+  download_dir <- dirname(dirname(downloaded_files[1]))
   kwb.utils::hsOpenWindowsExplorer(download_dir)
 }
 
