@@ -23,7 +23,7 @@ License: MIT + file LICENSE
 URL: https://github.com/KWB-R/kwb.budget
 BugReports: https://github.com/KWB-R/kwb.budget/issues
 Imports:
-    kwb.utils (>= 0.5.1),
+    kwb.utils (>= 0.6.0),
     openxlsx (>= 4.1.4)
 Suggests: 
     covr,
@@ -34,7 +34,7 @@ VignetteBuilder:
     knitr
 Remotes:
     github::kwb-r/kwb.nextcloud@dev,
-    github::kwb-r/kwb.utils@v0.5.1
+    github::kwb-r/kwb.utils@v0.6.0
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
