@@ -47,14 +47,14 @@ if (FALSE)
   # Define the path to an Excel file to read
   #file <- "C:/Users/hsonne/Documents/../Downloads/nextcloud_3d5c2c853fd2/DWC_Partner_Budget_Arctik_FINAL.xlsx"
   #file <- path.expand(downloaded_files[1])
+  budget_filled_dir <- file.path(download_dir, "10_Filled_out_forms")
 
   # Try to read the whole file
   files <- dir(
-    "C:/Users/micha/Documents/../Downloads/nextcloud_38c41c3e466b/", "DWC_.*xlsx$",
+    budget_filled_dir, "DWC_.*xlsx$",
     full.names = TRUE
   )
 
-  parallel::
   for (file in files) {
     print(file)
     kwb.budget:::read_partner_budget_from_excel(file)
@@ -96,8 +96,13 @@ if (FALSE)
 {
 
   # input costs files
-  files <- dir(download_dir, "xlsx$",
-               full.names = TRUE, all.files = FALSE)
+  budget_filled_dir <- file.path(download_dir, "10_Filled_out_forms")
+
+  # Try to read the whole file
+  files <- dir(
+    budget_filled_dir, "DWC_.*xlsx$",
+    full.names = TRUE
+  )
 
   # get costs data from input files
   system.time(costs_list <- lapply(seq_along(files), function(i) {
@@ -110,20 +115,22 @@ if (FALSE)
 
   }))
 
-  # parallel get costs data from input files
   ncores <- parallel::detectCores()
-  parallel::makeCluster(ncores)
-  system.time(costs_list <- lapply(seq_along(files), function(i) {
+  cl <- parallel::makeCluster(ncores)
+
+  system.time(costs_list_parallel <- parallel::parLapply(cl, files, function(file) {
 
     #i=1
-    file <- files[i]
-    message(sprintf("Reading '%s' (%d/%d)...", basename(file), i, length(files)))
+    #  file <- files[i]
+    # message(sprintf("Reading '%s' (%d/%d)...", basename(file), i, length(files)))
     try(kwb.budget::read_partner_budget_from_excel(file))
 
 
   }))
 
+  parallel::stopCluster(cl)
 
+  identical(costs_list, costs_list_parallel)
 
   # check if errors
   has_error <- sapply(costs_list, inherits, "try-error")
@@ -133,10 +140,10 @@ if (FALSE)
   costs_list <- costs_list[! has_error]
 
   # transform in dataframe
-  costs <- rbindAll(costs_list) %>% select(-Country)
+  costs <- kwb.utils::rbindAll(costs_list) %>% dplyr::select(-.Country)
 
   # table with direct costs by WP
-  costs_by_wp <- get_costs_by_work_package(costs_list)
+  costs_by_wp <- kwb.budget::get_costs_by_work_package(costs_list)
   head(costs_by_wp)
 
 
@@ -147,16 +154,16 @@ if (FALSE)
 
   # add indirect and total costs
   costs_by_wp <- costs_by_wp %>%
-    mutate(Reimbursement_rate = 0.01 * as.numeric(sub("%", "", costs_by_wp$Reimbursement_rate)),
-           Direct_cost = cost.personnel + cost.equipment + cost.consumables + cost.subcontracting,
-           Indirect_cost = 0.25 * (Direct_cost - cost.subcontracting),
-           Total_cost = Direct_cost + Indirect_cost,
-           Total_funded_cost = Reimbursement_rate * Total_cost)
+    dplyr::mutate(Reimbursement_rate = 0.01 * as.numeric(sub("%", "", .data$Reimbursement_rate)),
+           Direct_cost = .data$cost.personnel + .data$cost.equipment + .data$cost.consumables + .data$cost.subcontracting,
+           Indirect_cost = 0.25 * (.data$Direct_cost - .data$cost.subcontracting),
+           Total_cost = .data$Direct_cost + .data$Indirect_cost,
+           Total_funded_cost = .data$Reimbursement_rate * .data$Total_cost)
 
 
   # load partner info
   file_partner_info <- file.path(
-    paste0(folder_bugdet, "20_Summary_Files"),
+    file.path(download_dir, "20_Summary_Files"),
     "Partner_country_type.csv"
   )
   partner_info <- read.csv2(file_partner_info)
@@ -276,40 +283,7 @@ if (FALSE) {
   print(budget)
 }
 
-# get_costs_by_work_package ----------------------------------------------------
-get_costs_by_work_package <- function(costs)
-{
-  `%>%` <- magrittr::`%>%`
 
-  collect_lines_with_work_package <- function(x, name) {
-    result <- lapply(x, getAttribute, name)
-    result <- lapply(result, append_zero_costs)
-    result <- rbindAll(result)
-    result$cost <- kwb.utils::defaultIfNA(result$cost, 0)
-    result[! is.na(result$wp), ]
-  }
-
-  personnel <- collect_lines_with_work_package(costs, "personnel")
-  equipment <- collect_lines_with_work_package(costs, "equipment")
-  consumables <- collect_lines_with_work_package(costs, "consumables")
-  subcontracting <- collect_lines_with_work_package(costs, "subcontracting")
-
-  sum_by_work_package <- function(x) {
-    x %>% dplyr::group_by(partner, wp) %>% dplyr::summarise(cost = sum(cost))
-  }
-
-  sum_pm_by_work_package <- function(x) {
-    x %>% dplyr::group_by(partner, wp) %>% dplyr::summarise(person_months = sum(person_months, na.rm = TRUE))
-  }
-
-  kwb.utils::mergeAll(by = c("partner", "wp"), list(
-    personnel = sum_pm_by_work_package(personnel),
-    personnel = sum_by_work_package(personnel),
-    equipment = sum_by_work_package(equipment),
-    consumables = sum_by_work_package(consumables),
-    subcontracting = sum_by_work_package(subcontracting)
-  ))
-}
 
 # append_zero_costs ------------------------------------------------------------
 append_zero_costs <- function(x)
