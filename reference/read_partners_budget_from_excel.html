@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Function reference • kwb.budget</title>
+<title>Read Partners Budget From Excel Files — read_partners_budget_from_excel • kwb.budget</title>
 
 
 <!-- jquery -->
@@ -45,7 +45,8 @@
 
 
 
-<meta property="og:title" content="Function reference" />
+<meta property="og:title" content="Read Partners Budget From Excel Files — read_partners_budget_from_excel" />
+<meta property="og:description" content="Read Partners Budget From Excel Files" />
 
 
 
@@ -64,7 +65,7 @@
   </head>
 
   <body data-spy="scroll" data-target="#toc">
-    <div class="container template-reference-index">
+    <div class="container template-reference-topic">
       <header>
       <div class="navbar navbar-default navbar-fixed-top" role="navigation">
   <div class="container">
@@ -132,66 +133,47 @@
       </header>
 
 <div class="row">
-  <div class="contents col-md-9">
+  <div class="col-md-9 contents">
     <div class="page-header">
-      <h1>Reference</h1>
+    <h1>Read Partners Budget From Excel Files</h1>
+    <small class="dont-index">Source: <a href='https://github.com/KWB-R/kwb.budget/blob/master/R/read_partners_budget_from_excel.R'><code>R/read_partners_budget_from_excel.R</code></a></small>
+    <div class="hidden name"><code>read_partners_budget_from_excel.Rd</code></div>
     </div>
 
-    <table class="ref-index">
+    <div class="ref-description">
+    <p>Read Partners Budget From Excel Files</p>
+    </div>
 
-    <colgroup>
-      
-      <col class="alias" />
-      <col class="title" />
-    </colgroup>
+    <pre class="usage"><span class='fu'>read_partners_budget_from_excel</span>(
+  <span class='no'>files</span>,
+  <span class='kw'>number_of_work_packages</span> <span class='kw'>=</span> <span class='fl'>7</span>,
+  <span class='kw'>run_parallel</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>
+)</pre>
 
-    <tbody>
-      <tr>
-        <th colspan="2">
-          <h2 id="section-all-functions" class="hasAnchor"><a href="#section-all-functions" class="anchor"></a>All functions</h2>
-          <p class="section-desc"></p>
-        </th>
-      </tr>
-      
-      
-    </tbody><tbody>
-      
-      
-      <tr>
-        
-        <td>
-          <p><code><a href="append_zero_costs.html">append_zero_costs()</a></code> </p>
-        </td>
-        <td><p>Helper function: append zero costs</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="get_costs_by_work_package.html">get_costs_by_work_package()</a></code> </p>
-        </td>
-        <td><p>Get Costs by Work Package</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="get_named_excel_ranges.html">get_named_excel_ranges()</a></code> </p>
-        </td>
-        <td><p>Helper function: get named Excel ranges</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="read_partner_budget_from_excel.html">read_partner_budget_from_excel()</a></code> </p>
-        </td>
-        <td><p>Read Partner Budget From Excel File</p></td>
-      </tr><tr>
-        
-        <td>
-          <p><code><a href="read_partners_budget_from_excel.html">read_partners_budget_from_excel()</a></code> </p>
-        </td>
-        <td><p>Read Partners Budget From Excel Files</p></td>
-      </tr>
-    </tbody>
+    <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
+    <table class="ref-arguments">
+    <colgroup><col class="name" /><col class="desc" /></colgroup>
+    <tr>
+      <th>files</th>
+      <td><p>full path to EXCEL files</p></td>
+    </tr>
+    <tr>
+      <th>number_of_work_packages</th>
+      <td><p>number of work packages in EXCEL template
+(default: 7, as used for DWC)</p></td>
+    </tr>
+    <tr>
+      <th>run_parallel</th>
+      <td><p>should import be performed using multiple CPU cores or
+only run on a single core (default: TRUE)</p></td>
+    </tr>
     </table>
-  </div>
 
+    <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
+
+    <p>list with imported EXCEL budget files data</p>
+
+  </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top">
       <h2 data-toc-skip>Contents</h2>
