@@ -13,8 +13,71 @@ library(kwb.utils)
 # List and download nextcloud files --------------------------------------------
 if (FALSE)
 {
-  path <- "proposals/bmbf_digital/Previous-projects/Budget"
-  #path <- "proposals/h2020_covid/60_Budget"
+
+  # List files recursively (only xlsx or csv files)
+
+  path_partners <- kwb.nextcloud:::download_files(
+    "proposals/h2020_covid/30_Partners/DWH_Partners-LOI-EAB_List.xlsx")
+
+  partner_infos <- openxlsx::read.xlsx(xlsxFile = path_partners,
+                                       sheet = "Partners-PIC-Main contact")
+
+
+
+
+
+
+  path_budget_template <- kwb.nextcloud:::download_files(
+    "proposals/h2020_covid/60_Budget/DWH_partner-budget_template.xlsx",
+     target_dir = dirname(path_partners))
+
+create_partners_budget_files <- function(path_partners,
+                                         path_budget_template,
+                                         target_dir = file.path(dirname(path_partners),
+                                                                 "10_Filled_out_forms")) {
+
+
+ wb <- openxlsx::loadWorkbook(path_budget_template)
+
+ partner_infos <- openxlsx::read.xlsx(xlsxFile = path_partners,
+                                      sheet = "Partners-PIC-Main contact")
+
+ fs::dir_create(target_dir)
+
+message(sprintf("Creating target directory: %s", target_dir))
+sapply(seq_len(nrow(partner_infos)), function(index) {
+
+  metadata <-  partner_infos[index,]
+
+ openxlsx::writeData(wb = wb,
+                     sheet = "Summary",
+                     x = c(metadata$pic,
+                           metadata$partner_name_legal,
+                           metadata$partner_name_short,
+                           metadata$funding_rate),
+                     startCol = "C",
+                     startRow = 5)
+
+
+ budget_file_name <- sprintf("DWH_partner-budget_%02d_%s.xlsx",
+                             metadata$partner_id,
+                             metadata$partner_name_short)
+
+
+ message(sprintf("Creating file: %s", budget_file_name))
+ openxlsx::saveWorkbook(wb, file = file.path(target_dir,
+                                             budget_file_name))
+
+})
+
+target_dir
+}
+
+output_dir <- create_partners_budget_files(path_partners, path_budget_template)
+kwb.utils::hsOpenWindowsExplorer(output_dir)
+
+ #path <- "proposals/bmbf_digital/Previous-projects/Budget"
+  path <- "proposals/h2020_covid/60_Budget/10_Filled_out_forms"
 
   # List files recursively (only xlsx or csv files)
   file_info <- kwb.nextcloud::list_files(
@@ -37,7 +100,7 @@ if (FALSE)
     downloaded_files <- kwb.nextcloud:::download_files(paths = full_paths)
   )
 
-  download_dir <- dirname(dirname(downloaded_files[1]))
+  download_dir <- dirname(downloaded_files[1])
   kwb.utils::hsOpenWindowsExplorer(download_dir)
 }
 
@@ -96,11 +159,11 @@ if (FALSE)
 {
 
   # input costs files
-  budget_filled_dir <- file.path(download_dir, "10_Filled_out_forms")
+  budget_filled_dir <- file.path(download_dir)
 
   # Try to read the whole file
   files <- dir(
-    budget_filled_dir, "DWC_.*xlsx$",
+    budget_filled_dir, "DWH_partner-budget_[0-9][0-9].*xlsx$",
     full.names = TRUE
   )
 
@@ -110,7 +173,8 @@ if (FALSE)
     #i=1
     file <- files[i]
     message(sprintf("Reading '%s' (%d/%d)...", basename(file), i, length(files)))
-    try(kwb.budget::read_partner_budget_from_excel(file))
+    try(kwb.budget::read_partner_budget_from_excel(file,
+                                                   number_of_work_packages = 6))
 
 
   }))

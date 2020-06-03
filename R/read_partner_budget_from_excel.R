@@ -1,12 +1,16 @@
 #' Read Partner Budget From Excel File
 #'
 #' @param file full path to EXCEL file
+#' @param number_of_work_packages number of work packages in EXCEL template
+#' (default: 7, as used for DWC)
 #' @param dbg debug message (default: TRUE)
 #' @return list with imported EXCEL budget file data
 #' @export
 #' @importFrom kwb.utils noFactorDataFrame renameAndSelect removeColumns toLookupTable
 #'
-read_partner_budget_from_excel <- function(file, dbg = TRUE)
+read_partner_budget_from_excel <- function(file,
+                                           number_of_work_packages = 7,
+                                           dbg = TRUE)
 {
   #kwb.utils::assignPackageObjects("kwb.budget")
   #kwb.utils::assignArgumentDefaults(read_partner_budget_from_excel)
@@ -47,10 +51,12 @@ read_partner_budget_from_excel <- function(file, dbg = TRUE)
 
   wp_acronyms <- substr(personnel$wp_name, 1, 3)
 
-  stopifnot(identical(wp_acronyms, paste0("WP", 1:7)))
+  wp_id <- seq_len(number_of_work_packages)
+
+  stopifnot(identical(wp_acronyms, paste0("WP", wp_id)))
 
   personnel <- kwb.utils::removeColumns(
-    kwb.utils::setColumns(personnel, wp = 1:7, dbg = FALSE),
+    kwb.utils::setColumns(personnel, wp = wp_id, dbg = FALSE),
     columns = "wp_name"
   )
 
