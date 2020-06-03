@@ -34,21 +34,35 @@ if (FALSE)
 create_partners_budget_files <- function(path_partners,
                                          path_budget_template,
                                          target_dir = file.path(dirname(path_partners),
-                                                                 "10_Filled_out_forms")) {
+                                                                 "10_Filled_out_forms"),
+                                         set_values = FALSE,
+                                         overwrite = TRUE) {
 
 
- wb <- openxlsx::loadWorkbook(path_budget_template)
 
  partner_infos <- openxlsx::read.xlsx(xlsxFile = path_partners,
                                       sheet = "Partners-PIC-Main contact")
 
  fs::dir_create(target_dir)
 
+ if (set_values)  wb <- openxlsx::loadWorkbook(path_budget_template)
+
 message(sprintf("Creating target directory: %s", target_dir))
 sapply(seq_len(nrow(partner_infos)), function(index) {
 
   metadata <-  partner_infos[index,]
 
+  budget_file_name <- sprintf("DWH_partner-budget_%02d_%s.xlsx",
+                              metadata$partner_id,
+                              metadata$partner_name_short)
+
+  target_file <- file.path(target_dir, budget_file_name)
+
+
+  if (set_values) {
+   wb <- openxlsx::loadWorkbook(path_budget_template)
+   message(sprintf("Renaming template and add partner metadata (DANGER: cell protection is lost!): %s",
+                   target_file))
  openxlsx::writeData(wb = wb,
                      sheet = "Summary",
                      x = c(metadata$pic,
@@ -59,14 +73,13 @@ sapply(seq_len(nrow(partner_infos)), function(index) {
                      startRow = 5)
 
 
- budget_file_name <- sprintf("DWH_partner-budget_%02d_%s.xlsx",
-                             metadata$partner_id,
-                             metadata$partner_name_short)
 
+ openxlsx::saveWorkbook(wb, file = target_file, overwrite = overwrite)
+  } else {
+    message(sprintf("Renaming budget-template to: %s", target_file))
+    fs::file_copy(path_budget_template, target_file, overwrite = overwrite)
+  }
 
- message(sprintf("Creating file: %s", budget_file_name))
- openxlsx::saveWorkbook(wb, file = file.path(target_dir,
-                                             budget_file_name))
 
 })
 
@@ -110,11 +123,11 @@ if (FALSE)
   # Define the path to an Excel file to read
   #file <- "C:/Users/hsonne/Documents/../Downloads/nextcloud_3d5c2c853fd2/DWC_Partner_Budget_Arctik_FINAL.xlsx"
   #file <- path.expand(downloaded_files[1])
-  budget_filled_dir <- file.path(download_dir, "10_Filled_out_forms")
+  budget_filled_dir <- file.path(download_dir)
 
   # Try to read the whole file
   files <- dir(
-    budget_filled_dir, "DWC_.*xlsx$",
+    budget_filled_dir, "DWH_partner-budget_[0-9][0-9].*xlsx$",
     full.names = TRUE
   )
 
@@ -187,7 +200,8 @@ if (FALSE)
     #i=1
     #  file <- files[i]
     # message(sprintf("Reading '%s' (%d/%d)...", basename(file), i, length(files)))
-    try(kwb.budget::read_partner_budget_from_excel(file))
+    try(kwb.budget::read_partner_budget_from_excel(file,
+                                                   number_of_work_packages = 6))
 
 
   }))
