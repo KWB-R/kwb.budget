@@ -25,8 +25,9 @@ BugReports: https://github.com/KWB-R/kwb.budget/issues
 Imports:
     dplyr,
     kwb.utils (>= 0.6.0),
-    openxlsx (>= 4.1.4),
     magrittr,
+    parallel,
+    openxlsx (>= 4.1.4),
     rlang
 Suggests: 
     covr,

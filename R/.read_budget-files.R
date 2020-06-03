@@ -86,7 +86,7 @@ sapply(seq_len(nrow(partner_infos)), function(index) {
 target_dir
 }
 
-output_dir <- create_partners_budget_files(path_partners, path_budget_template)
+output_dir <- create_partners_budget_files(path_partners, path_budget_template, set_values = TRUE)
 kwb.utils::hsOpenWindowsExplorer(output_dir)
 
  #path <- "proposals/bmbf_digital/Previous-projects/Budget"
@@ -131,10 +131,7 @@ if (FALSE)
     full.names = TRUE
   )
 
-  for (file in files) {
-    print(file)
-    kwb.budget:::read_partner_budget_from_excel(file)
-  }
+  read_partners_budget_from_excel(files, number_of_work_packages = 6)
 
   # Show available ranges named "range_..."
   grep_range <- function(x) grep("^range_", x, value = TRUE)
@@ -181,34 +178,8 @@ if (FALSE)
   )
 
   # get costs data from input files
-  system.time(costs_list <- lapply(seq_along(files), function(i) {
+  costs_list <- read_partners_budget_from_excel(files, number_of_work_packages = 6)
 
-    #i=1
-    file <- files[i]
-    message(sprintf("Reading '%s' (%d/%d)...", basename(file), i, length(files)))
-    try(kwb.budget::read_partner_budget_from_excel(file,
-                                                   number_of_work_packages = 6))
-
-
-  }))
-
-  ncores <- parallel::detectCores()
-  cl <- parallel::makeCluster(ncores)
-
-  system.time(costs_list_parallel <- parallel::parLapply(cl, files, function(file) {
-
-    #i=1
-    #  file <- files[i]
-    # message(sprintf("Reading '%s' (%d/%d)...", basename(file), i, length(files)))
-    try(kwb.budget::read_partner_budget_from_excel(file,
-                                                   number_of_work_packages = 6))
-
-
-  }))
-
-  parallel::stopCluster(cl)
-
-  identical(costs_list, costs_list_parallel)
 
   # check if errors
   has_error <- sapply(costs_list, inherits, "try-error")
