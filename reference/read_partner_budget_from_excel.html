@@ -144,7 +144,7 @@
     <p>Read Partner Budget From Excel File</p>
     </div>
 
-    <pre class="usage"><span class='fu'>read_partner_budget_from_excel</span>(<span class='no'>file</span>, <span class='kw'>dbg</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>)</pre>
+    <pre class="usage"><span class='fu'>read_partner_budget_from_excel</span>(<span class='no'>file</span>, <span class='kw'>number_of_work_packages</span> <span class='kw'>=</span> <span class='fl'>7</span>, <span class='kw'>dbg</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>)</pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -152,6 +152,11 @@
     <tr>
       <th>file</th>
       <td><p>full path to EXCEL file</p></td>
+    </tr>
+    <tr>
+      <th>number_of_work_packages</th>
+      <td><p>number of work packages in EXCEL template
+(default: 7, as used for DWC)</p></td>
     </tr>
     <tr>
       <th>dbg</th>
