@@ -195,27 +195,31 @@ if (FALSE)
      path_partners <- kwb.nextcloud:::download_files(paths =
                                                        "proposals/h2020_covid/30_Partners/DWH_Partners-LOI-EAB_List.xlsx")
 
-     partner_infos <- openxlsx::read.xlsx(xlsxFile = path_partners,
+     partner_info <- openxlsx::read.xlsx(xlsxFile = path_partners,
                                           sheet = "Partners-PIC-Main contact")
 
      # check if names are the same in the two files before merging
-     check <- costs$partner_short_name %in% partner_infos$partner_name_short
+     check <- costs$partner_short_name %in% partner_info$partner_name_short
      costs$partner_short_name[!check]
 
      # create merge costs and costs_by_wp
-     costs_data <- merge(costs, partner_info, by.x = "partner_short_name", by.y = "Partner_short_name")
+     costs_data <- merge(costs, partner_info, by.x = "partner_id", by.y = "partner_id")
      head(costs_data)
 
+
+     ### -> this merge is not possible because partners changed "short_name in "budget" excel file
      costs_data_by_wp <- merge(costs_by_wp, partner_info, by.x = "partner", by.y = "Partner_short_name")
      head(costs_data_by_wp)
 
      # prepare simplified table with costs
      costs_data_short <- prepare_cost_data_short(costs_data)
-     costs_data_short %>% select(partner_short_name, Total_funded_cost)
+     costs_data_short %>%
+       dplyr::select(.data$partner_name_short, .data$Total_funded_cost) %>%
+       dplyr::arrange(dplyr::desc(.data$Total_funded_cost))
 
      # prepare table with person month for each wp
      pm_data_by_wp <- costs_data_by_wp %>%
-       select(partner, wp, person_months.personnel) %>%
+       dplyr::select(partner, wp, person_months.personnel) %>%
        tidyr::spread(wp, person_months.personnel)
 
      # merge with simplified table withz costs
@@ -355,11 +359,11 @@ prepare_cost_data_short <- function(costs_data){
 
   # reduce table size
   costs_data <- costs_data %>%
-    select(- c(pic_number, pic_number, partner_name, author_name,
+    dplyr::select(- c(pic_number, partner_name, author_name,
                author_email, contact_name, contact_email,
                reimbursement_rate, Participant)) %>%
-    select(-Reimbursement_rate, Reimbursement_rate) %>%
-    select(-Total_funded_cost, Total_funded_cost)
+    dplyr::select(-Reimbursement_rate, Reimbursement_rate) %>%
+    dplyr::select(-Total_funded_cost, Total_funded_cost)
 
   costs_data
 
@@ -369,10 +373,10 @@ prepare_cost_data_by_type <- function (costs_data){
 
   # create summary by participant type
   cost_data_by_type <- costs_data %>%
-    group_by(Type) %>%
-    summarize(Total_funded_cost = round(sum(Total_funded_cost), 2)) %>%
-    mutate(Total_funded_cost_p = round(100 * Total_funded_cost / sum(Total_funded_cost), 2),
-           Type = as.character(Type)) %>%
+    dplyr::group_by(Type) %>%
+    dplyr::summarize(Total_funded_cost = round(sum(.data$Total_funded_cost), 2)) %>%
+    dplyr::mutate(Total_funded_cost_p = round(100 * .data$Total_funded_cost / sum(.data$Total_funded_cost), 2),
+           Type = as.character(.data$Type)) %>%
     as.data.frame()
 
   # show funded costs by type
@@ -381,8 +385,8 @@ prepare_cost_data_by_type <- function (costs_data){
                                sum(cost_data_by_type$Total_funded_cost),
                                sum(cost_data_by_type$Total_funded_cost_p))
   ) %>%
-    mutate(Total_funded_cost = as.numeric(Total_funded_cost),
-           Total_funded_cost_p = as.numeric(Total_funded_cost_p))
+    dplyr::mutate(Total_funded_cost = as.numeric(.data$Total_funded_cost),
+           Total_funded_cost_p = as.numeric(.data$Total_funded_cost_p))
 
   cost_data_by_type
 
