@@ -1,20 +1,9 @@
-# remotes::install_github("kwb-r/kwb.utils")
-# remotes::install_github("kwb-r/kwb.db")
-# remotes::install_github("kwb-r/kwb.nextcloud@dev")
 
-library(dplyr)
-library(kwb.utils)
-
-# define folder for bugdet related files
-#folder_bugdet <- "//servername/projekte$/PLANNING_PROJECTS/H2020_2018_Digital/Stage 2/60_Budget/"
-#folder_bugdet <- "C:/Users/username/Desktop/H2020_2018_Digital/Stage 2/60_Budget/"
-#folder_bugdet <- "//servername/projekte$/PLANNING_PROJECTS/H2020_2018_Digital/Stage 3 GA/50_Bugdet/"
-
-# List and download nextcloud files --------------------------------------------
+# Create Budget Files per Partner ----------------------------------------------
 if (FALSE)
 {
 
-  # List files recursively (only xlsx or csv files)
+  # 1) Get partner metadata
 
   path_partners <- kwb.nextcloud:::download_files(
     "proposals/h2020_covid/30_Partners/DWH_Partners-LOI-EAB_List.xlsx")
@@ -25,25 +14,45 @@ if (FALSE)
 
 
 
-
+  # 3) Get budget template
 
   path_budget_template <- kwb.nextcloud:::download_files(
     "proposals/h2020_covid/60_Budget/DWH_partner-budget_template.xlsx",
      target_dir = dirname(path_partners))
 
-output_dir <- create_partners_budget_files(path_partners,
+  # 3) Create one file per partner with partner metadata
+
+output_dir <- kwb.budget::create_partners_budget_files(path_partners,
                                            path_budget_template,
                                            target_dir = file.path(dirname(path_partners),
                                                                   "10_Filled_out_forms"),
                                            set_values = TRUE)
 
-kwb.utils::hsOpenWindowsExplorer(output_dir)
+  # 4) Open folder locally in Windows Explorer
+ kwb.utils::hsOpenWindowsExplorer(output_dir)
+
+ # 5) Manually modify EXCEL files
+
+ # - Add more advanced rules (e.g. WP leader get XX PM for XX)
+ # - Add cell protection (otherwise R script will crash if someone deletes cells/rows) and
+ # - Upload to files to folder  "proposals/h2020_covid/60_Budget/10_Filled_out_forms"
+ # - Send email to partners with instructions (save under same name, ...)
+
+}
+
+# Download Budget Files from Nextcloud -----------------------------------------
+if (FALSE)
+{
+
+  # 1) Download budget forms from Nextcloud
 
  #path <- "proposals/bmbf_digital/Previous-projects/Budget"
   path <- "proposals/h2020_covid/60_Budget/10_Filled_out_forms"
 
+
+  # 2) Generate budget files metadata (in order to detect updates, required for automation)
   # List files recursively (only xlsx or csv files)
-  file_info <- kwb.nextcloud::list_files(
+  file_info_latest <- kwb.nextcloud::list_files(
     path = path,
     pattern = "(xlsx|csv)$",
     recursive = TRUE,
@@ -51,20 +60,52 @@ kwb.utils::hsOpenWindowsExplorer(output_dir)
   )
 
   # Check the result
-  View(file_info)
+  #View(file_info_latest)
 
-  # Provide the full paths by prepending the root path
-  full_paths <- file.path(
-    kwb.utils::getAttribute(file_info, "root"), file_info$file
-  )
+  # 3) Upload file metadata to cloud (only once!)
+  is_this_the_first_time <- FALSE
+  if (is_this_the_firs_time) {
 
-  # Download the corresponding files to a temp folder below ~/../Downloads
-  system.time(
-    downloaded_files <- kwb.nextcloud:::download_files(paths = full_paths)
-  )
+  path_local_file_info <- file.path(dirname(path_partners),
+                                    "10_Filled_out_forms/file-info.csv")
 
-  download_dir <- dirname(downloaded_files[1])
-  kwb.utils::hsOpenWindowsExplorer(download_dir)
+  fs::dir_create(dirname(path_local_file_info))
+
+  readr::write_csv(x = file_info_latest, path = path_local_file_info)
+
+  kwb.nextcloud::upload_file(file = path_local_file_info,
+                             target_path = "proposals/h2020_covid/60_Budget/20_Summary_Files")
+
+  } else {
+
+    # Provide the full paths by prepending the root path
+    full_paths <- file.path(
+      kwb.utils::getAttribute(file_info_latest, "root"), file_info$file
+    )
+
+    tdir_root <-  kwb.nextcloud:::create_download_dir("nextcloud_")
+    tdir_forms <- file.path(tdir_root, "10_filled_out_forms")
+    tdir_summary <- file.path(tdir_root, "20_Summary_Files")
+
+    dir.create(tdir_forms)
+    dir.create(tdir_summary)
+
+    # Download the corresponding files to a temp folder below ~/../Downloads
+    system.time(
+      downloaded_files <- kwb.nextcloud:::download_files(paths = full_paths,
+                                                         target_dir = tdir_forms)
+    )
+
+   file_info_old <-  kwb.nextcloud::download_file(
+    file = path_local_file_info,
+    target_path = tdir_summary)
+
+   ### test: open directory in explorer
+
+   #kwb.utils::hsOpenWindowsExplorer(normalizePath(tdir_root))
+  }
+
+
 }
 
 # Test reading files -----------------------------------------------------------
@@ -284,13 +325,7 @@ if (FALSE) {
 
 
 
-# append_zero_costs ------------------------------------------------------------
-append_zero_costs <- function(x)
-{
-  kwb.utils::safeRowBind(x, kwb.utils::noFactorDataFrame(
-    partner = unique(x$partner), wp = 1:7, cost = 0
-  ))
-}
+
 
 # to_cost_matrices -------------------------------------------------------------
 to_cost_matrices <- function(costs_by_wp)
