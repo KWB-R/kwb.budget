@@ -4,10 +4,10 @@
 \alias{get_costs_by_work_package}
 \title{Get Costs by Work Package}
 \usage{
-get_costs_by_work_package(costs)
+get_costs_by_work_package(costs_list)
 }
 \arguments{
-\item{costs}{list with "costs" from multiple partner Excelsheets}
+\item{costs_list}{list with "costs" from multiple partner Excelsheets}
 }
 \value{
 data frame with costs per work package

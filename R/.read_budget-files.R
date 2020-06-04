@@ -149,7 +149,7 @@ if (FALSE)
       costs_list <- setNames(
         object = kwb.budget::read_partners_budget_from_excel(
           budget_files,
-          number_of_work_packages = 6,
+          n_work_packages = 6,
           run_parallel = FALSE # false = slower but with more debug messages
         ),
         basename(budget_files)
