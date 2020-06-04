@@ -1,3 +1,4 @@
+library(kwb.budget)
 
 # Create Budget Files per Partner ----------------------------------------------
 if (FALSE)
@@ -5,7 +6,7 @@ if (FALSE)
 
   # 1) Get partner metadata
 
-  path_partners <- kwb.nextcloud:::download_files(
+  path_partners <- kwb.nextcloud:::download_files(paths =
     "proposals/h2020_covid/30_Partners/DWH_Partners-LOI-EAB_List.xlsx")
 
   partner_infos <- openxlsx::read.xlsx(xlsxFile = path_partners,
@@ -16,7 +17,7 @@ if (FALSE)
 
   # 3) Get budget template
 
-  path_budget_template <- kwb.nextcloud:::download_files(
+  path_budget_template <- kwb.nextcloud:::download_files(paths =
     "proposals/h2020_covid/60_Budget/DWH_partner-budget_template.xlsx",
      target_dir = dirname(path_partners))
 
@@ -108,59 +109,12 @@ if (FALSE)
 
 }
 
-# Test reading files -----------------------------------------------------------
-if (FALSE)
-{
-  # Define the path to an Excel file to read
-  #file <- "C:/Users/hsonne/Documents/../Downloads/nextcloud_3d5c2c853fd2/DWC_Partner_Budget_Arctik_FINAL.xlsx"
-  #file <- path.expand(downloaded_files[1])
-  budget_filled_dir <- file.path(download_dir)
-
-  # Try to read the whole file
-  files <- dir(
-    budget_filled_dir, "DWH_partner-budget_[0-9][0-9].*xlsx$",
-    full.names = TRUE
-  )
-
-  read_partners_budget_from_excel(files, number_of_work_packages = 6)
-
-  # Show available ranges named "range_..."
-  grep_range <- function(x) grep("^range_", x, value = TRUE)
-  region_names_1 <- grep_range(kwb.db::hsTables(file))
-  region_names_2 <- grep_range(openxlsx::getNamedRegions(file))
-
-  # Same ranges with both methods?
-  identical(region_names_1, region_names_2)
-
-  # Read cell region, method 1: using RODBC
-  read_region_1 <- function(x) {
-    #kwb.utils::removeEmptyColumns(
-    kwb.db::hsGetTable(file, x, stringsAsFactors = FALSE)
-    #)
-  }
-
-  # Read cell region, method 2: using openxlsx
-  read_region_2 <- function(x) {
-    openxlsx::read.xlsx(
-      file, namedRegion = x, skipEmptyCols = FALSE, sep.names = " "
-    )
-  }
-
-  # All region names
-  (region_names <- region_names_1)
-
-  regions_data_1 <- lapply(region_names, read_region_1)
-  regions_data_2 <- lapply(region_names_2, read_region_2)
-
-  diffobj::diffStr(regions_data_1, regions_data_2)
-}
-
 # DATA PREPARATION -------------------------------------------------------------
 if (FALSE)
 {
 
   # input costs files
-  budget_filled_dir <- file.path(download_dir)
+  budget_filled_dir <- tdir_forms
 
   # Try to read the whole file
   files <- dir(
@@ -169,7 +123,10 @@ if (FALSE)
   )
 
   # get costs data from input files
-  costs_list <- read_partners_budget_from_excel(files, number_of_work_packages = 6)
+  costs_list <- kwb.budget::read_partners_budget_from_excel(files,
+                                                            number_of_work_packages = 6,
+                                                            run_parallel = FALSE # false = slower but better for debugging (more debug messages)
+                                                            )
 
 
   # check if errors
@@ -180,7 +137,7 @@ if (FALSE)
   costs_list <- costs_list[! has_error]
 
   # transform in dataframe
-  costs <- kwb.utils::rbindAll(costs_list) %>% dplyr::select(-.Country)
+  costs <- kwb.utils::rbindAll(costs_list) %>% dplyr::select(-.data$Country)
 
   # table with direct costs by WP
   costs_by_wp <- kwb.budget::get_costs_by_work_package(costs_list)
@@ -201,12 +158,22 @@ if (FALSE)
            Total_funded_cost = .data$Reimbursement_rate * .data$Total_cost)
 
 
-  # load partner info
-  file_partner_info <- file.path(
-    file.path(download_dir, "20_Summary_Files"),
-    "Partner_country_type.csv"
-  )
-  partner_info <- read.csv2(file_partner_info)
+#  used in DWC proposal
+#   # load partner info
+#   file_partner_info <- file.path(
+#     file.path(download_dir, "20_Summary_Files"),
+#     "Partner_country_type.csv"
+#   )
+#   partner_info <- read.csv2(file_partner_info)
+
+
+  # Get partner metadata (for DWH proposal)
+
+  path_partners <- kwb.nextcloud:::download_files(paths =
+    "proposals/h2020_covid/30_Partners/DWH_Partners-LOI-EAB_List.xlsx")
+
+  partner_infos <- openxlsx::read.xlsx(xlsxFile = path_partners,
+                                       sheet = "Partners-PIC-Main contact")
 
   # check if names are the same in the two files before merging
   check <- costs$partner_short_name %in% partner_info$Partner_short_name
