@@ -6,14 +6,14 @@
 \usage{
 read_partners_budget_from_excel(
   files,
-  number_of_work_packages = 7,
+  n_work_packages = 7,
   run_parallel = TRUE
 )
 }
 \arguments{
 \item{files}{full path to EXCEL files}
 
-\item{number_of_work_packages}{number of work packages in EXCEL template
+\item{n_work_packages}{number of work packages in EXCEL template
 (default: 7, as used for DWC)}
 
 \item{run_parallel}{should import be performed using multiple CPU cores or
