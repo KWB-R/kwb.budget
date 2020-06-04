@@ -34,7 +34,7 @@ read_partner_budget_from_excel <- function(file,
 
   budget <- kwb.utils::noFactorDataFrame(
     filename = filename,
-    partner_id = stringr::str_extract(filename, "[0-9][0-9]"),
+    partner_id = as.numeric(stringr::str_extract(filename, "[0-9][0-9]")),
     Participant	= general$partner_short_name,
     Country	= "",
     #Direct_personnel_costs = sum(ranges$range_personnel[["Cost (EUR)"]]),
