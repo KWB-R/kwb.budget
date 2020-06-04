@@ -29,7 +29,8 @@ Imports:
     magrittr,
     parallel,
     openxlsx (>= 4.1.4),
-    rlang
+    rlang, 
+    stringr
 Suggests: 
     covr,
     knitr,

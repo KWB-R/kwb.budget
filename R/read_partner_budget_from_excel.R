@@ -7,6 +7,7 @@
 #' @return list with imported EXCEL budget file data
 #' @export
 #' @importFrom kwb.utils noFactorDataFrame renameAndSelect removeColumns toLookupTable
+#' @importFrom stringr str_extract
 #'
 read_partner_budget_from_excel <- function(file,
                                            number_of_work_packages = 7,
