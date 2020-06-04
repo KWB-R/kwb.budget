@@ -4,10 +4,12 @@
 \alias{append_zero_costs}
 \title{Helper function: append zero costs}
 \usage{
-append_zero_costs(x)
+append_zero_costs(x, n_work_packages)
 }
 \arguments{
-\item{x}{x}
+\item{x}{x
+@param n_work_packages number of work packages in EXCEL template
+(default: 7, as used for DWC)}
 }
 \value{
 data frame with zero costs

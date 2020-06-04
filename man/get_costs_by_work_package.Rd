@@ -4,10 +4,12 @@
 \alias{get_costs_by_work_package}
 \title{Get Costs by Work Package}
 \usage{
-get_costs_by_work_package(costs_list)
+get_costs_by_work_package(costs_list, n_work_packages = 7)
 }
 \arguments{
-\item{costs_list}{list with "costs" from multiple partner Excelsheets}
+\item{costs_list}{list with "costs" from multiple partner Excelsheets
+@param n_work_packages number of work packages in EXCEL template
+(default: 7, as used for DWC)}
 }
 \value{
 data frame with costs per work package

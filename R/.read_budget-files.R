@@ -40,13 +40,6 @@ if (FALSE)
   #path <- "proposals/bmbf_digital/Previous-projects/Budget"
   path <- "proposals/h2020_covid/60_Budget/10_Filled_out_forms"
 
-  tdir_root <-  kwb.nextcloud:::create_download_dir("nextcloud_")
-  tdir_forms <- file.path(tdir_root, "10_filled_out_forms")
-  tdir_summary <- file.path(tdir_root, "20_Summary_Files")
-
-  dir.create(tdir_forms)
-  dir.create(tdir_summary)
-
   # 2) Generate budget files metadata (in order to detect updates, required for
   #    automation)
   # List files recursively (only xlsx or csv files)
@@ -61,6 +54,14 @@ if (FALSE)
   #View(file_info_latest)
 
   # 3) Upload file metadata to cloud (only once!)
+  tdir_root <-  kwb.nextcloud:::create_download_dir("nextcloud_")
+  tdir_forms <- file.path(tdir_root, "10_filled_out_forms")
+  tdir_summary <- file.path(tdir_root, "20_Summary_Files")
+
+  dir.create(tdir_forms)
+  dir.create(tdir_summary)
+
+
   is_this_the_first_time <- FALSE
 
   if (is_this_the_first_time) {
@@ -126,6 +127,7 @@ if (FALSE)
       # Download the corresponding files to a temp folder below ~/../Downloads
       system.time(
         downloaded_files <- kwb.nextcloud:::download_files(
+          #href = file_info_latest$href,
           paths =  full_paths,
           target_dir = tdir_forms
         )
@@ -162,28 +164,31 @@ if (FALSE)
       print(has_error)
       table(has_error)
 
+      stopifnot(all(!has_error))
       # Exclude elements that caused errors
       costs_list <- costs_list[! has_error]
 
+
+      # Get partner metadata (for DWH proposal)
+      columns <- c("partner_id", "partner_name_short", "partner_type", "country")
+
+      partner_info <- read_partner_info(columns)
+
+
       # Transform in dataframe
       costs <- kwb.utils::rbindAll(costs_list) %>%
-        dplyr::select(-.data$Country)
+        dplyr::select(-.data$Country) %>%
+        dplyr::left_join(partner_info, by = "partner_id")
 
       # Table with direct costs by WP
-      costs_by_wp <- kwb.budget::get_costs_by_work_package(costs_list)
-      head(costs_by_wp)
-      View(costs_by_wp)
-
-      # Add reimbursement rate
-      costs_by_wp <- merge(
-        costs_by_wp,
-        costs[, c("partner_short_name", "Reimbursement_rate")],
-        by.x = "partner",
-        by.y = "partner_short_name"
-      )
-
-      # Add indirect and total costs
-      costs_by_wp <- costs_by_wp %>%
+      costs_by_wp <- kwb.budget::get_costs_by_work_package(costs_list,
+                                                           n_work_packages = 6) %>%
+        merge(costs[, c("partner_id", "partner_name_short", "partner_type", "country", "Reimbursement_rate")],
+              by.x = "partner",
+              by.y = "partner_id"
+        )  %>%
+        # Add indirect and total costs
+        dplyr::rename(partner_id = partner, partner = partner_name_short) %>%
         dplyr::mutate(
           Reimbursement_rate = 0.01 * as.numeric(
             sub("%", "", .data$Reimbursement_rate)
@@ -197,7 +202,12 @@ if (FALSE)
           ),
           Total_cost = .data$Direct_cost + .data$Indirect_cost,
           Total_funded_cost = .data$Reimbursement_rate * .data$Total_cost
-        )
+        ) %>%
+        kwb.utils::moveColumnsToFront(c("partner_id", "partner", "partner_type", "country"
+        ))
+
+      head(costs_by_wp)
+      View(costs_by_wp)
 
       #  used in DWC proposal
       #   # load partner info
@@ -207,9 +217,6 @@ if (FALSE)
       #   )
       #   partner_info <- read.csv2(file_partner_info)
 
-      # Get partner metadata (for DWH proposal)
-      partner_info <- get_partner_info()
-
       # Check if names are the same in the two files before merging
       check <- costs$partner_short_name %in% partner_info$partner_name_short
       costs$partner_short_name[! check]
@@ -218,44 +225,41 @@ if (FALSE)
       costs_data <- merge(costs, partner_info, by = "partner_id")
       head(costs_data)
 
-      ### -> this merge is not possible because partners changed "short_name in
-      # "budget" excel file
-      costs_data_by_wp <- merge(
-        costs_by_wp, partner_info,
-        by.x = "partner",
-        by.y = "Partner_short_name"
-      )
-
-      head(costs_data_by_wp)
+      head(costs_by_wp)
 
       # Prepare simplified table with costs
-      costs_data_short <- prepare_cost_data_short(costs_data)
-      costs_data_short %>%
+      costs_short <- prepare_cost_data_short(costs)
+
+      costs_short %>%
         dplyr::select(.data$partner_name_short, .data$Total_funded_cost) %>%
         dplyr::arrange(dplyr::desc(.data$Total_funded_cost))
 
       # Prepare table with person month for each wp
-      pm_data_by_wp <- costs_data_by_wp %>%
+      pm_data_by_wp <- costs_by_wp %>%
         dplyr::select(partner, wp, person_months.personnel) %>%
         tidyr::spread(wp, person_months.personnel)
 
       # Merge with simplified table withz costs
       costs_data_short <- merge(
-        costs_data_short, pm_data_by_wp,
+        costs_short, pm_data_by_wp,
         by.x = "partner_short_name",
-        by.y = "partner"
+        by.y = "partner",
+        all = TRUE
       ) %>%
-        select(-Total_funded_cost, Total_funded_cost)
+        dplyr::select(-Total_funded_cost, Total_funded_cost)
 
       # Prepare table with costs by company type
-      costs_data_by_type <- prepare_cost_data_by_type(costs_data_short)
-      costs_data_by_type
+      costs_data_by_type <- costs %>%
+        dplyr::rename(Type = .data$partner_type) %>%
+        prepare_cost_data_by_type()
 
       ### Save outputs
       version_num <- 7
 
-      folder_out <- paste0(folder_bugdet, "20_Summary_Files")
-      file_out <- file.path(folder_out, paste0("V", version_num, "_DWC_Costs"))
+      file_out <- file.path(
+        tdir_summary,
+        sprintf("DWC_partner-budget_v%d", version_num)
+      )
 
       write.csv2(costs_data, paste0(file_out, ".csv"))
       save(costs_data, file = paste0(file_out, ".rdata"))
@@ -412,16 +416,20 @@ prepare_cost_data_short <- function(costs_data)
 }
 
 # read_partner_info ------------------------------------------------------------
-read_partner_info <- function()
+read_partner_info <- function(columns = NULL)
 {
   path <- "proposals/h2020_covid/30_Partners/DWH_Partners-LOI-EAB_List.xlsx"
 
-  xls_partners <- kwb.nextcloud::download_files(paths = path)
+  path_partners <- kwb.nextcloud::download_files(paths = path)
 
   result <- openxlsx::read.xlsx(
     xlsxFile = path_partners,
     sheet = "Partners-PIC-Main contact"
   )
+
+  if (! is.null(columns)) {
+    result <- kwb.utils::selectColumns(result, columns)
+  }
 
   structure(result, path_partners = path_partners)
 }
@@ -430,7 +438,7 @@ read_partner_info <- function()
 download_partner_budget_files <- function()
 {
   file_info <- kwb.nextcloud::list_files(
-    "proposals/h2020_covid/60_Budget",
+    "proposals/h2020_covid/60_Budget/10_Filled_out_forms",
     pattern = "DWH_partner-budget_\\d\\d",
     recursive = TRUE,
     full_info = TRUE

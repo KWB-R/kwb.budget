@@ -6,7 +6,7 @@
 #' @param dbg debug message (default: TRUE)
 #' @return list with imported EXCEL budget file data
 #' @export
-#' @importFrom kwb.utils noFactorDataFrame renameAndSelect removeColumns toLookupTable
+#' @importFrom kwb.utils noFactorDataFrame renameAndSelect removeColumns toLookupTable extractSubstring
 #' @importFrom stringr str_extract
 #'
 read_partner_budget_from_excel <- function(
@@ -36,6 +36,7 @@ read_partner_budget_from_excel <- function(
   budget <- kwb.utils::noFactorDataFrame(
     filename = filename,
     partner_id = as.numeric(stringr::str_extract(filename, "[0-9][0-9]")),
+    #Participant	= kwb.utils::extractSubstring("_([^_]+)\\.xlsx$", filename, 1),
     Participant	= general$partner_short_name,
     Country	= "",
     #Direct_personnel_costs = sum(ranges$range_personnel[["Cost (EUR)"]]),
@@ -91,7 +92,7 @@ read_partner_budget_from_excel <- function(
   )))
 
   bind_partner <- function(x) {
-    cbind(kwb.utils::noFactorDataFrame(partner = general$partner_short_name), x)
+    cbind(kwb.utils::noFactorDataFrame(partner = budget$partner_id), x)
   }
 
   structure(
