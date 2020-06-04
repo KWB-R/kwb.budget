@@ -10,8 +10,6 @@ append_zero_costs <- function(x) {
   ))
 }
 
-
-
 ##' Get Costs by Work Package
 ##' @param costs list with "costs" from multiple partner Excelsheets
 ##'
@@ -22,8 +20,13 @@ append_zero_costs <- function(x) {
 ##' @importFrom dplyr group_by summarise
 ##' @importFrom rlang .data
 ##'
-get_costs_by_work_package <- function(costs)
+get_costs_by_work_package <- function(costs_list)
 {
+  # costs_list must be a list
+  stopifnot(is.list(costs_list))
+
+  # All list elements must be data frames
+  stopifnot(all(sapply(costs_list, inherits, "data.frame")))
 
   collect_lines_with_work_package <- function(x, name) {
     result <- lapply(x, kwb.utils::getAttribute, name)
@@ -33,10 +36,10 @@ get_costs_by_work_package <- function(costs)
     result[! is.na(result$wp), ]
   }
 
-  personnel <- collect_lines_with_work_package(costs, "personnel")
-  equipment <- collect_lines_with_work_package(costs, "equipment")
-  consumables <- collect_lines_with_work_package(costs, "consumables")
-  subcontracting <- collect_lines_with_work_package(costs, "subcontracting")
+  personnel <- collect_lines_with_work_package(costs_list, "personnel")
+  equipment <- collect_lines_with_work_package(costs_list, "equipment")
+  consumables <- collect_lines_with_work_package(costs_list, "consumables")
+  subcontracting <- collect_lines_with_work_package(costs_list, "subcontracting")
 
   sum_by_work_package <- function(x) {
     x %>%
