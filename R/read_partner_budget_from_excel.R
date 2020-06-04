@@ -30,8 +30,10 @@ read_partner_budget_from_excel <- function(file,
     ranges$range_direct, "Key", dbg = FALSE
   )
 
+  filename <- basename(file)
+
   budget <- kwb.utils::noFactorDataFrame(
-    filename = basename(file),
+    filename = filename,
     partner_id = stringr::str_extract(filename, "[0-9][0-9]"),
     Participant	= general$partner_short_name,
     Country	= "",
