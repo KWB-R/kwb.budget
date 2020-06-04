@@ -4,13 +4,8 @@ library(kwb.budget)
 if (FALSE)
 {
   # 1) Get partner metadata
-  path_partnerlist <- "proposals/h2020_covid/30_Partners/DWH_Partners-LOI-EAB_List.xlsx"
-  path_partners <- kwb.nextcloud::download_files(paths = path_partnerlist)
-
-  partner_infos <- openxlsx::read.xlsx(
-    xlsxFile = path_partners,
-    sheet = "Partners-PIC-Main contact"
-  )
+  partner_info <- read_partner_info()
+  path_partners <- kwb.utils::getAttribute(partner_info, "path_partners")
 
   # 3) Get budget template
   path_budget_template <- kwb.nextcloud::download_files(
@@ -115,13 +110,17 @@ if (FALSE)
 
     if (any(file_updated)) {
 
-      message(sprintf("The following files were updated:\n\n%s", paste(file_comparsion$msg[which(file_updated)],collapse = "\n")))
+      message(sprintf(
+        "The following files were updated:\n\n%s",
+        paste(file_comparsion$msg[which(file_updated)], collapse = "\n")
+      ))
 
       ### 1) write functions and add code for analysing (code below)
 
       # Provide the full paths by prepending the root path
       full_paths <- file.path(
-        kwb.utils::getAttribute(file_info_latest, "root"), file_info_latest$file
+        kwb.utils::getAttribute(file_info_latest, "root"),
+        file_info_latest$file
       )
 
       # Download the corresponding files to a temp folder below ~/../Downloads
@@ -143,7 +142,8 @@ if (FALSE)
         object = kwb.budget::read_partners_budget_from_excel(
           budget_files,
           number_of_work_packages = 6,
-          run_parallel = FALSE # false = slower but better for debugging (more debug messages)
+          run_parallel = FALSE # false = slower but better for debugging
+                               # (more debug messages)
         ),
         basename(budget_files)
       )
@@ -174,9 +174,16 @@ if (FALSE)
       # add indirect and total costs
       costs_by_wp <- costs_by_wp %>%
         dplyr::mutate(
-          Reimbursement_rate = 0.01 * as.numeric(sub("%", "", .data$Reimbursement_rate)),
-          Direct_cost = .data$cost.personnel + .data$cost.equipment + .data$cost.consumables + .data$cost.subcontracting,
-          Indirect_cost = 0.25 * (.data$Direct_cost - .data$cost.subcontracting),
+          Reimbursement_rate = 0.01 * as.numeric(
+            sub("%", "", .data$Reimbursement_rate)
+          ),
+          Direct_cost = .data$cost.personnel +
+            .data$cost.equipment +
+            .data$cost.consumables +
+            .data$cost.subcontracting,
+          Indirect_cost = 0.25 * (
+            .data$Direct_cost - .data$cost.subcontracting
+          ),
           Total_cost = .data$Direct_cost + .data$Indirect_cost,
           Total_funded_cost = .data$Reimbursement_rate * .data$Total_cost
         )
@@ -190,15 +197,7 @@ if (FALSE)
       #   partner_info <- read.csv2(file_partner_info)
 
       # Get partner metadata (for DWH proposal)
-
-      path_partners <- kwb.nextcloud:::download_files(
-        paths = "proposals/h2020_covid/30_Partners/DWH_Partners-LOI-EAB_List.xlsx"
-      )
-
-      partner_info <- openxlsx::read.xlsx(
-        xlsxFile = path_partners,
-        sheet = "Partners-PIC-Main contact"
-      )
+      partner_info <- get_partner_info()
 
       # check if names are the same in the two files before merging
       check <- costs$partner_short_name %in% partner_info$partner_name_short
@@ -208,7 +207,8 @@ if (FALSE)
       costs_data <- merge(costs, partner_info, by = "partner_id")
       head(costs_data)
 
-      ### -> this merge is not possible because partners changed "short_name in "budget" excel file
+      ### -> this merge is not possible because partners changed "short_name in
+      # "budget" excel file
       costs_data_by_wp <- merge(
         costs_by_wp, partner_info,
         by.x = "partner",
@@ -257,12 +257,19 @@ if (FALSE)
 
       ## 2) if successfull -> upload new file-info.csv
 
-      #fs::dir_create(dirname(path_local_file_info))
-      #readr::write_csv(x = file_info_latest, path = path_local_file_info)
-      #kwb.nextcloud::upload_file(file = path_local_file_info,
-      #                           target_path = "proposals/h2020_covid/60_Budget/20_Summary_Files")
+      # fs::dir_create(dirname(path_local_file_info))
+      # readr::write_csv(x = file_info_latest, path = path_local_file_info)
+      # kwb.nextcloud::upload_file(
+      #   file = path_local_file_info,
+      #   target_path = "proposals/h2020_covid/60_Budget/20_Summary_Files"
+      # )
+
     } else {
-      message("Going to sleep, because I have nothing to do! (budget files on the cloud have not changed since last execution!)")
+
+      message(
+        "Going to sleep, because I have nothing to do! (budget files on ",
+        "the cloud have not changed since last execution!)"
+      )
     }
 
     ### test: open directory in explorer
@@ -372,7 +379,7 @@ to_cost_matrices <- function(costs_by_wp)
   lapply(cost_columns, to_cost_matrix, x = costs_by_wp)
 }
 
-# prepare_cost_data_short ----------------------------------------------------
+# prepare_cost_data_short ------------------------------------------------------
 prepare_cost_data_short <- function(costs_data)
 {
   # reduce table size
@@ -391,4 +398,19 @@ prepare_cost_data_short <- function(costs_data)
     dplyr::select(-Total_funded_cost, Total_funded_cost)
 
   costs_data
+}
+
+# read_partner_info ------------------------------------------------------------
+read_partner_info <- function()
+{
+  path <- "proposals/h2020_covid/30_Partners/DWH_Partners-LOI-EAB_List.xlsx"
+
+  xls_partners <- kwb.nextcloud::download_files(paths = path)
+
+  result <- openxlsx::read.xlsx(
+    xlsxFile = path_partners,
+    sheet = "Partners-PIC-Main contact"
+  )
+
+  structure(result, path_partners = path_partners)
 }
