@@ -150,17 +150,19 @@ if (FALSE)
         object = kwb.budget::read_partners_budget_from_excel(
           budget_files,
           number_of_work_packages = 6,
-          run_parallel = FALSE # false = slower but better for debugging
-                               # (more debug messages)
+          run_parallel = FALSE # false = slower but with more debug messages
         ),
         basename(budget_files)
       )
 
-      # check if errors
+      # There are warnings: "No data found on worksheet.", why?
+
+      # Check for errors
       has_error <- sapply(costs_list, inherits, "try-error")
       print(has_error)
+      table(has_error)
 
-      # select participants without error
+      # Exclude elements that caused errors
       costs_list <- costs_list[! has_error]
 
       # transform in dataframe
