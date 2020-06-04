@@ -150,28 +150,31 @@ if (FALSE)
         object = kwb.budget::read_partners_budget_from_excel(
           budget_files,
           number_of_work_packages = 6,
-          run_parallel = FALSE # false = slower but better for debugging
-                               # (more debug messages)
+          run_parallel = FALSE # false = slower but with more debug messages
         ),
         basename(budget_files)
       )
 
-      # check if errors
+      # There are warnings: "No data found on worksheet.", why?
+
+      # Check for errors
       has_error <- sapply(costs_list, inherits, "try-error")
       print(has_error)
+      table(has_error)
 
-      # select participants without error
+      # Exclude elements that caused errors
       costs_list <- costs_list[! has_error]
 
-      # transform in dataframe
+      # Transform in dataframe
       costs <- kwb.utils::rbindAll(costs_list) %>%
         dplyr::select(-.data$Country)
 
-      # table with direct costs by WP
+      # Table with direct costs by WP
       costs_by_wp <- kwb.budget::get_costs_by_work_package(costs_list)
       head(costs_by_wp)
+      View(costs_by_wp)
 
-      # add reimbursement rate
+      # Add reimbursement rate
       costs_by_wp <- merge(
         costs_by_wp,
         costs[, c("partner_short_name", "Reimbursement_rate")],
@@ -179,7 +182,7 @@ if (FALSE)
         by.y = "partner_short_name"
       )
 
-      # add indirect and total costs
+      # Add indirect and total costs
       costs_by_wp <- costs_by_wp %>%
         dplyr::mutate(
           Reimbursement_rate = 0.01 * as.numeric(
@@ -207,11 +210,11 @@ if (FALSE)
       # Get partner metadata (for DWH proposal)
       partner_info <- get_partner_info()
 
-      # check if names are the same in the two files before merging
+      # Check if names are the same in the two files before merging
       check <- costs$partner_short_name %in% partner_info$partner_name_short
       costs$partner_short_name[! check]
 
-      # create merge costs and costs_by_wp
+      # Create merge costs and costs_by_wp
       costs_data <- merge(costs, partner_info, by = "partner_id")
       head(costs_data)
 
@@ -225,18 +228,18 @@ if (FALSE)
 
       head(costs_data_by_wp)
 
-      # prepare simplified table with costs
+      # Prepare simplified table with costs
       costs_data_short <- prepare_cost_data_short(costs_data)
       costs_data_short %>%
         dplyr::select(.data$partner_name_short, .data$Total_funded_cost) %>%
         dplyr::arrange(dplyr::desc(.data$Total_funded_cost))
 
-      # prepare table with person month for each wp
+      # Prepare table with person month for each wp
       pm_data_by_wp <- costs_data_by_wp %>%
         dplyr::select(partner, wp, person_months.personnel) %>%
         tidyr::spread(wp, person_months.personnel)
 
-      # merge with simplified table withz costs
+      # Merge with simplified table withz costs
       costs_data_short <- merge(
         costs_data_short, pm_data_by_wp,
         by.x = "partner_short_name",
@@ -244,11 +247,11 @@ if (FALSE)
       ) %>%
         select(-Total_funded_cost, Total_funded_cost)
 
-      # prepare table with costs by company type
+      # Prepare table with costs by company type
       costs_data_by_type <- prepare_cost_data_by_type(costs_data_short)
       costs_data_by_type
 
-      ### save outputs
+      ### Save outputs
       version_num <- 7
 
       folder_out <- paste0(folder_bugdet, "20_Summary_Files")
