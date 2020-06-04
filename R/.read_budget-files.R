@@ -169,8 +169,8 @@ if (FALSE)
 
      # add reimbursement rate
      costs_by_wp <- merge(costs_by_wp,
-                          costs[, c("partner_id", "Reimbursement_rate")],
-                          by.x = "partner_id", by.y = "partner_id")
+                          costs[, c("partner_short_name", "Reimbursement_rate")],
+                          by.x = "partner", by.y = "partner_short_name")
 
      # add indirect and total costs
      costs_by_wp <- costs_by_wp %>%
