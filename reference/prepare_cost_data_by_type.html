@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Read Partners Budget From Excel Files — read_partners_budget_from_excel • kwb.budget</title>
+<title>Helper function: prepare costs by type — prepare_cost_data_by_type • kwb.budget</title>
 
 
 <!-- jquery -->
@@ -45,8 +45,8 @@
 
 
 
-<meta property="og:title" content="Read Partners Budget From Excel Files — read_partners_budget_from_excel" />
-<meta property="og:description" content="Read Partners Budget From Excel Files" />
+<meta property="og:title" content="Helper function: prepare costs by type — prepare_cost_data_by_type" />
+<meta property="og:description" content="Helper function: prepare costs by type" />
 
 
 
@@ -135,43 +135,29 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>Read Partners Budget From Excel Files</h1>
-    <small class="dont-index">Source: <a href='https://github.com/KWB-R/kwb.budget/blob/master/R/read_partners_budget_from_excel.R'><code>R/read_partners_budget_from_excel.R</code></a></small>
-    <div class="hidden name"><code>read_partners_budget_from_excel.Rd</code></div>
+    <h1>Helper function: prepare costs by type</h1>
+    <small class="dont-index">Source: <a href='https://github.com/KWB-R/kwb.budget/blob/master/R/prepare_cost_data_by_type.R'><code>R/prepare_cost_data_by_type.R</code></a></small>
+    <div class="hidden name"><code>prepare_cost_data_by_type.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>Read Partners Budget From Excel Files</p>
+    <p>Helper function: prepare costs by type</p>
     </div>
 
-    <pre class="usage"><span class='fu'>read_partners_budget_from_excel</span>(
-  <span class='no'>files</span>,
-  <span class='kw'>n_work_packages</span> <span class='kw'>=</span> <span class='fl'>7</span>,
-  <span class='kw'>run_parallel</span> <span class='kw'>=</span> <span class='fl'>TRUE</span>
-)</pre>
+    <pre class="usage"><span class='fu'>prepare_cost_data_by_type</span>(<span class='no'>costs_data</span>)</pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>files</th>
-      <td><p>full path to EXCEL files</p></td>
-    </tr>
-    <tr>
-      <th>n_work_packages</th>
-      <td><p>number of work packages in EXCEL template
-(default: 7, as used for DWC)</p></td>
-    </tr>
-    <tr>
-      <th>run_parallel</th>
-      <td><p>should import be performed using multiple CPU cores or
-only run on a single core (default: TRUE)</p></td>
+      <th>costs_data</th>
+      <td><p>costs data</p></td>
     </tr>
     </table>
 
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
-    <p>list with imported EXCEL budget files data</p>
+    <p>df with costs by type (e.g. SME, research, ..)</p>
 
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
