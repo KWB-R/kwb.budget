@@ -137,6 +137,20 @@ if (FALSE)
         full.names = TRUE
       )
 
+      #### HAUKES VERSION (START HERE)
+
+      file_info <- kwb.nextcloud::list_files(
+        "proposals/h2020_covid/60_Budget",
+        pattern = "DWH_partner-budget_\\d\\d",
+        recursive = TRUE,
+        full_info = TRUE
+      )
+
+      budget_files <- kwb.nextcloud::download_files(file_info$href)
+      kwb.utils::hsOpenWindowsExplorer(dirname(budget_files[1]))
+
+      #### HAUKES VERSION
+
       # get costs data from input files
       costs_list <- setNames(
         object = kwb.budget::read_partners_budget_from_excel(
