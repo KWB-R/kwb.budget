@@ -272,85 +272,99 @@ if (FALSE)
 }
 
 # ANALYSIS ---------------------------------------------------------------------
-if (FALSE) {
-
+if (FALSE)
+{
   # get total costs by WP
   costs_by_wp_summary <- costs_by_wp_data %>%
     group_by(wp) %>%
-    summarise(Total_cost = sum(Total_cost),
-              Total_funded_cost = sum(Total_funded_cost)) %>%
+    summarise(
+      Total_cost = sum(Total_cost),
+      Total_funded_cost = sum(Total_funded_cost)
+    ) %>%
     as.data.frame()
 
   costs_by_wp_summary
 
   par(mfrow = c(2,2))
 
-  plot(costs_by_wp_summary$wp,
-       costs_by_wp_summary$Total_cost,
-       pch = 16, las = 1,
-       xlab = "WP",
-       ylab = "",
-       yaxt = "n",
-       main = "",
-       col = "blue",
-       cex.main = 0.7)
-  points(costs_by_wp_summary$wp, costs_by_wp_summary$Total_funded_cost, col = "green")
+  plot(
+    costs_by_wp_summary$wp,
+    costs_by_wp_summary$Total_cost,
+    pch = 16, las = 1,
+    xlab = "WP",
+    ylab = "",
+    yaxt = "n",
+    main = "",
+    col = "blue",
+    cex.main = 0.7
+  )
+
+  points(
+    costs_by_wp_summary$wp,
+    costs_by_wp_summary$Total_funded_cost,
+    col = "green"
+  )
 
   grid()
 
   axis(2, las = 2, cex = 0.4)
 
 
-  barplot(costs$Total_funded_cost, names.arg =  costs$partner_short_name,
-          las = 2)
+  barplot(
+    costs$Total_funded_cost, names.arg =  costs$partner_short_name, las = 2
+  )
+
   grid()
 
-  labels = paste0("Requested grant €:",
-                  round(sum(costs_by_wp_summary$Total_funded_cost), 0),
-                  "\n Max. grant €:",
-                  round(sum(costs_by_wp_summary$Total_cost), 0))
+  labels = paste0(
+    "Requested grant €:",
+    round(sum(costs_by_wp_summary$Total_funded_cost), 0),
+    "\n Max. grant €:",
+    round(sum(costs_by_wp_summary$Total_cost), 0)
+  )
 
+  plot(
+    1, xaxt = "n", yaxt = "n", xlab = "", ylab = "", type = "n",
+    frame.plot = FALSE
+  )
 
-  plot(1, xaxt = "n", yaxt = "n", xlab = "", ylab = "", type = "n", frame.plot = FALSE)
   text(1, 1, labels = labels)
-
 
   budget_merge_country <- budget_merge %>%
     group_by(Country.y) %>%
-    summarise(Total_cost = sum(Total_cost),
-              Total_funded_cost = sum(Total_funded_cost)) %>%
+    summarise(
+      Total_cost = sum(Total_cost),
+      Total_funded_cost = sum(Total_funded_cost)
+    ) %>%
     as.data.frame()
 
   budget_merge_type <- budget_merge %>%
     group_by(Type) %>%
-    summarise(Total_cost = sum(Total_cost),
-              Total_funded_cost = sum(Total_funded_cost)) %>%
+    summarise(
+      Total_cost = sum(Total_cost),
+      Total_funded_cost = sum(Total_funded_cost)
+    ) %>%
     as.data.frame()
 
   library(gridExtra)
   library(grid)
 
   grid.table(budget_merge_country)
-
   grid.table(budget_merge_type)
-
-  #
 
   cost_matrices <- to_cost_matrices(costs_by_wp)
 
   print(budget)
 }
 
-
-
-
-
 # to_cost_matrices -------------------------------------------------------------
 to_cost_matrices <- function(costs_by_wp)
 {
   to_cost_matrix <- function(x, column) {
     input <- kwb.utils::selectColumns(x, c(names(x)[1:2], column))
-    kwb.utils::countOrSum(input, by = names(input)[1:2], sum.up = names(input)[3])
+    kwb.utils::countOrSum(
+      input, by = names(input)[1:2], sum.up = names(input)[3]
+    )
   }
 
   cost_columns <- kwb.utils::toNamedList(names(costs_by_wp)[-(1:2)])
@@ -359,17 +373,22 @@ to_cost_matrices <- function(costs_by_wp)
 }
 
 # prepare_cost_data_short ----------------------------------------------------
-prepare_cost_data_short <- function(costs_data){
-
+prepare_cost_data_short <- function(costs_data)
+{
   # reduce table size
   costs_data <- costs_data %>%
-    dplyr::select(- c(pic_number, partner_name, author_name,
-                      author_email, contact_name, contact_email,
-                      reimbursement_rate, Participant)) %>%
+    dplyr::select(-c(
+      pic_number,
+      partner_name,
+      author_name,
+      author_email,
+      contact_name,
+      contact_email,
+      reimbursement_rate,
+      Participant
+    )) %>%
     dplyr::select(-Reimbursement_rate, Reimbursement_rate) %>%
     dplyr::select(-Total_funded_cost, Total_funded_cost)
 
   costs_data
-
 }
-
