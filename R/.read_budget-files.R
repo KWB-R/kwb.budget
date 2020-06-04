@@ -139,14 +139,8 @@ if (FALSE)
 
       #### HAUKES VERSION (START HERE)
 
-      file_info <- kwb.nextcloud::list_files(
-        "proposals/h2020_covid/60_Budget",
-        pattern = "DWH_partner-budget_\\d\\d",
-        recursive = TRUE,
-        full_info = TRUE
-      )
+      budget_files <- download_partner_budget_files()
 
-      budget_files <- kwb.nextcloud::download_files(file_info$href)
       kwb.utils::hsOpenWindowsExplorer(dirname(budget_files[1]))
 
       #### HAUKES VERSION
@@ -427,4 +421,17 @@ read_partner_info <- function()
   )
 
   structure(result, path_partners = path_partners)
+}
+
+# download_partner_budget_files ------------------------------------------------
+download_partner_budget_files <- function()
+{
+  file_info <- kwb.nextcloud::list_files(
+    "proposals/h2020_covid/60_Budget",
+    pattern = "DWH_partner-budget_\\d\\d",
+    recursive = TRUE,
+    full_info = TRUE
+  )
+
+  kwb.nextcloud::download_files(file_info$href)
 }
