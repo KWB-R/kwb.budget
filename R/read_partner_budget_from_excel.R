@@ -38,7 +38,7 @@ read_partner_budget_from_excel <- function(
     partner_id = as.numeric(stringr::str_extract(filename, "[0-9][0-9]")),
     #Participant	= kwb.utils::extractSubstring("_([^_]+)\\.xlsx$", filename, 1),
     Participant	= general$partner_short_name,
-    Country	= "",
+    #Country	= "",
     #Direct_personnel_costs = sum(ranges$range_personnel[["Cost (EUR)"]]),
     Direct_personnel_cost = ranges$range_direct["sum_personnel", "Cost.(EUR)"],
     Direct_other_cost = sum(ranges$range_direct[2:4, "Cost.(EUR)"]),
@@ -95,8 +95,18 @@ read_partner_budget_from_excel <- function(
     cbind(kwb.utils::noFactorDataFrame(partner = budget$partner_id), x)
   }
 
+  result <- cbind(
+    kwb.utils::removeColumns(general, c(
+      "reimbursement_rate", "partner_short_name"
+    )),
+    budget,
+    stringsAsFactors = FALSE
+  )
+
+  main_columns <- c("filename", "partner_id", "Participant", "partner_name")
+
   structure(
-    cbind(general, budget, stringsAsFactors = FALSE),
+    kwb.utils::moveColumnsToFront(result, main_columns),
     personnel = bind_partner(personnel),
     consumables = bind_partner(consumables),
     equipment = bind_partner(equipment),

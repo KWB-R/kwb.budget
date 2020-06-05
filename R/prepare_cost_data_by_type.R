@@ -1,15 +1,16 @@
 #' Helper function: prepare costs by type
 #'
-#' @param costs_data  costs data
+#' @param costs_overview  costs data
 #'
 #' @return df with costs by type (e.g. SME, research, ..)
 #' @export
-#' @importFrom dplyr group_by summarize mutate
+#' @importFrom dplyr group_by summarize mutate arrange desc
 #'
-prepare_cost_data_by_type <- function (costs_data)
+get_costs_by_type <- function (costs_overview)
 {
   # create summary by participant type
-  cost_data_by_type <- costs_data %>%
+  cost_data_by_type <- costs_overview %>%
+    dplyr::rename(Type = .data$partner_type) %>%
     dplyr::group_by(.data$Type) %>%
     dplyr::summarize(
       Total_funded_cost = round(sum(.data$Total_funded_cost), digits = 2)
@@ -21,6 +22,7 @@ prepare_cost_data_by_type <- function (costs_data)
       ),
       Type = as.character(.data$Type)
     ) %>%
+    dplyr::arrange(dplyr::desc(.data$Total_funded_cost)) %>%
     as.data.frame()
 
   # show funded costs by type

@@ -61,7 +61,6 @@ if (FALSE)
   dir.create(tdir_forms)
   dir.create(tdir_summary)
 
-
   is_this_the_first_time <- FALSE
 
   if (is_this_the_first_time) {
@@ -143,132 +142,23 @@ if (FALSE)
 
       budget_files <- download_partner_budget_files()
 
-      kwb.utils::hsOpenWindowsExplorer(dirname(budget_files[1]))
+      #kwb.utils::hsOpenWindowsExplorer(dirname(budget_files[1]))
 
       #### HAUKES VERSION
 
-      # get costs data from input files
-      costs_list <- setNames(
-        object = kwb.budget::read_partners_budget_from_excel(
-          budget_files,
-          n_work_packages = 6,
-          run_parallel = FALSE # false = slower but with more debug messages
-        ),
-        basename(budget_files)
-      )
+      # Get information on costs from input files
+      costs_list <- read_costs_from_input_files(budget_files)
 
-      # There are warnings: "No data found on worksheet.", why?
+      # Save or reload
+      # sema.berlin::save_r_object(costs_list = costs_list, in_package = FALSE)
+      # costs_list <- sema.berlin::load_r_object("costs_list", in_package = FALSE)
 
-      # Check for errors
-      has_error <- sapply(costs_list, inherits, "try-error")
-      print(has_error)
-      table(has_error)
+      # Get all different cost views as a list of data frames
+      costs <- get_all_cost_sheets(costs_list)
 
-      stopifnot(all(!has_error))
-      # Exclude elements that caused errors
-      costs_list <- costs_list[! has_error]
-
-
-      # Get partner metadata (for DWH proposal)
-      columns <- c("partner_id", "partner_name_short", "partner_type", "country")
-
-      partner_info <- read_partner_info(columns)
-
-
-      # Transform in dataframe
-      costs <- kwb.utils::rbindAll(costs_list) %>%
-        dplyr::select(-.data$Country) %>%
-        dplyr::left_join(partner_info, by = "partner_id")
-
-      # Table with direct costs by WP
-      costs_by_wp <- kwb.budget::get_costs_by_work_package(costs_list,
-                                                           n_work_packages = 6) %>%
-        merge(costs[, c("partner_id", "partner_name_short", "partner_type", "country", "Reimbursement_rate")],
-              by.x = "partner",
-              by.y = "partner_id"
-        )  %>%
-        # Add indirect and total costs
-        dplyr::rename(partner_id = partner, partner = partner_name_short) %>%
-        dplyr::mutate(
-          Reimbursement_rate = 0.01 * as.numeric(
-            sub("%", "", .data$Reimbursement_rate)
-          ),
-          Direct_cost = .data$cost.personnel +
-            .data$cost.equipment +
-            .data$cost.consumables +
-            .data$cost.subcontracting,
-          Indirect_cost = 0.25 * (
-            .data$Direct_cost - .data$cost.subcontracting
-          ),
-          Total_cost = .data$Direct_cost + .data$Indirect_cost,
-          Total_funded_cost = .data$Reimbursement_rate * .data$Total_cost
-        ) %>%
-        kwb.utils::moveColumnsToFront(c("partner_id", "partner", "partner_type", "country"
-        ))
-
-      head(costs_by_wp)
-      View(costs_by_wp)
-
-      #  used in DWC proposal
-      #   # load partner info
-      #   file_partner_info <- file.path(
-      #     file.path(download_dir, "20_Summary_Files"),
-      #     "Partner_country_type.csv"
-      #   )
-      #   partner_info <- read.csv2(file_partner_info)
-
-      # Check if names are the same in the two files before merging
-      check <- costs$partner_short_name %in% partner_info$partner_name_short
-      costs$partner_short_name[! check]
-
-      # Create merge costs and costs_by_wp
-      costs_data <- merge(costs, partner_info, by = "partner_id")
-      head(costs_data)
-
-      head(costs_by_wp)
-
-      # Prepare simplified table with costs
-      costs_short <- prepare_cost_data_short(costs)
-
-      costs_short %>%
-        dplyr::select(.data$partner_name_short, .data$Total_funded_cost) %>%
-        dplyr::arrange(dplyr::desc(.data$Total_funded_cost))
-
-      # Prepare table with person month for each wp
-      pm_data_by_wp <- costs_by_wp %>%
-        dplyr::select(partner, wp, person_months.personnel) %>%
-        tidyr::spread(wp, person_months.personnel)
-
-      # Merge with simplified table withz costs
-      costs_data_short <- merge(
-        costs_short, pm_data_by_wp,
-        by.x = "partner_short_name",
-        by.y = "partner",
-        all = TRUE
-      ) %>%
-        dplyr::select(-Total_funded_cost, Total_funded_cost)
-
-      # Prepare table with costs by company type
-      costs_data_by_type <- costs %>%
-        dplyr::rename(Type = .data$partner_type) %>%
-        prepare_cost_data_by_type()
-
-      ### Save outputs
-      version_num <- 7
-
-      file_out <- file.path(
-        tdir_summary,
-        sprintf("DWC_partner-budget_v%d", version_num)
-      )
-
-      write.csv2(costs_data, paste0(file_out, ".csv"))
-      save(costs_data, file = paste0(file_out, ".rdata"))
-
-      write.csv2(costs_data_by_wp, paste0(file_out, "_by_wp.csv"))
-      save(costs_data_by_wp, file = paste0(file_out, "_by_wp.rdata"))
-
-      write.csv2(costs_data_short, paste0(file_out, "_short.csv"))
-      write.csv2(costs_data_by_type, paste0(file_out, "_by_type.csv"))
+      ### Define path to xlsx output file
+      xls_file <- file.path(tdir_summary, "DWC_partner-budget.xlsx")
+      openxlsx::write.xlsx(costs, xls_file)
 
       ## 2) if successfull -> upload new file-info.csv
 
@@ -278,6 +168,11 @@ if (FALSE)
       #   file = path_local_file_info,
       #   target_path = "proposals/h2020_covid/60_Budget/20_Summary_Files"
       # )
+
+      kwb.nextcloud::upload_file(
+        file = xls_file,
+        target_path = "proposals/h2020_covid/60_Budget/20_Summary_Files"
+      )
 
     } else {
 
@@ -379,6 +274,144 @@ if (FALSE)
   print(budget)
 }
 
+# get_all_cost_sheets ----------------------------------------------------------
+get_all_cost_sheets <- function(costs_list)
+{
+  costs <- list()
+
+  # Generate overview with one row per partner
+  costs$overview <- list_to_costs_overview(costs_list)
+
+  # Generate detail view with one row per partner and work package
+  # (direct costs by WP)
+  costs$by_wp <- list_to_costs_by_wp(costs_list, costs$overview)
+
+  # Merge with simplified table withz costs
+  costs$short <- get_person_month_costs(costs$overview, costs$by_wp)
+
+  # Prepare table with costs by company type
+  costs$by_type <- kwb.budget::get_costs_by_type(costs$overview)
+
+  # Prepare table with costs by country
+  costs$by_country <- get_costs_by_country(costs$overview)
+
+  costs[c("overview", "short", "by_wp", "by_type", "by_country")]
+}
+
+# list_to_costs_overview -------------------------------------------------------
+list_to_costs_overview <- function(costs_list)
+{
+  # Get partner metadata (for DWH proposal)
+  partner_info <- read_partner_info(c(
+    "partner_id", "partner_name_short", "partner_type", "country"
+  ))
+
+  # Transform in dataframe
+  kwb.utils::rbindAll(costs_list) %>%
+    dplyr::left_join(partner_info, by = "partner_id")
+}
+
+# list_to_costs_by_wp ----------------------------------------------------------
+list_to_costs_by_wp <- function(costs_list, costs_overview)
+{
+  costs_overview <- kwb.utils::selectColumns(costs_overview, c(
+    "partner_id", "partner_name_short", "partner_type", "country",
+    "Reimbursement_rate"
+  ))
+
+  kwb.budget::get_costs_by_work_package(costs_list, n_work_packages = 6) %>%
+    merge(costs_overview, by.x = "partner", by.y = "partner_id") %>%
+    # Add indirect and total costs
+    dplyr::rename(partner_id = partner, partner = partner_name_short) %>%
+    dplyr::mutate(
+      Reimbursement_rate = 0.01 * as.numeric(
+        sub("%", "", .data$Reimbursement_rate)
+      ),
+      Direct_cost = .data$cost.personnel +
+        .data$cost.equipment +
+        .data$cost.consumables +
+        .data$cost.subcontracting,
+      Indirect_cost = 0.25 * (
+        .data$Direct_cost - .data$cost.subcontracting
+      ),
+      Total_cost = .data$Direct_cost + .data$Indirect_cost,
+      Total_funded_cost = .data$Reimbursement_rate * .data$Total_cost
+    ) %>%
+    kwb.utils::moveColumnsToFront(c(
+      "partner_id", "partner", "partner_type", "country"
+    ))
+}
+
+# get_person_months_by_wp ------------------------------------------------------
+get_person_months_by_wp <- function(costs_by_wp)
+{
+  costs_by_wp %>%
+    dplyr::select(.data$partner, .data$wp, .data$person_months.personnel) %>%
+    tidyr::spread(.data$wp, .data$person_months.personnel)
+}
+
+# get_person_month_costs -------------------------------------------------------
+get_person_month_costs <- function(costs_overview, costs_by_wp)
+{
+  # Prepare simplified table with costs
+  costs_short <- prepare_cost_data_short(costs_overview)
+
+  # Prepare table with person month for each wp
+  pm_data_by_wp <- get_person_months_by_wp(costs_by_wp)
+
+  merge(
+    costs_short, pm_data_by_wp,
+    by.x = "partner_name_short",
+    by.y = "partner",
+    all = TRUE
+  ) %>%
+    dplyr::select(-Total_funded_cost, Total_funded_cost)
+}
+
+# get_costs_by_country ---------------------------------------------------------
+get_costs_by_country <- function(costs_overview)
+{
+  costs_overview %>%
+    dplyr::group_by(country) %>%
+    dplyr::summarise(
+      Total_cost = sum(Total_cost),
+      Total_funded_cost = sum(Total_funded_cost),
+      n = dplyr::n()
+    ) %>%
+    dplyr::arrange(dplyr::desc(.data$Total_funded_cost)) %>%
+    as.data.frame()
+}
+
+# read_costs_from_input_files --------------------------------------------------
+read_costs_from_input_files <- function(budget_files)
+{
+  costs_list <- setNames(
+    object = kwb.budget::read_partners_budget_from_excel(
+      budget_files,
+      n_work_packages = 6,
+      run_parallel = FALSE # false = slower but with more debug messages
+    ),
+    basename(budget_files)
+  )
+
+  # There are warnings: "No data found on worksheet.", why?
+
+  # Check for errors
+  has_error <- sapply(costs_list, inherits, "try-error")
+
+  if (any(has_error)) {
+
+    kwb.utils::printIf(TRUE, has_error)
+
+    print(table(has_error))
+
+    message("Removing ", sum(has_error), " elements with errors")
+  }
+
+  # Exclude elements that caused errors
+  costs_list[! has_error]
+}
+
 # to_cost_matrices -------------------------------------------------------------
 to_cost_matrices <- function(costs_by_wp)
 {
@@ -398,7 +431,7 @@ to_cost_matrices <- function(costs_by_wp)
 prepare_cost_data_short <- function(costs_data)
 {
   # reduce table size
-  costs_data <- costs_data %>%
+  costs_data %>%
     dplyr::select(-c(
       pic_number,
       partner_name,
@@ -406,13 +439,14 @@ prepare_cost_data_short <- function(costs_data)
       author_email,
       contact_name,
       contact_email,
-      reimbursement_rate,
+      Reimbursement_rate,
       Participant
     )) %>%
     dplyr::select(-Reimbursement_rate, Reimbursement_rate) %>%
-    dplyr::select(-Total_funded_cost, Total_funded_cost)
-
-  costs_data
+    dplyr::select(-Total_funded_cost, Total_funded_cost) %>%
+    kwb.utils::moveColumnsToFront(c(
+      "filename", "partner_id", "partner_name_short", "partner_type", "country"
+    ))
 }
 
 # read_partner_info ------------------------------------------------------------
