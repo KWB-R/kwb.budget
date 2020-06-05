@@ -138,20 +138,14 @@ if (FALSE)
         full.names = TRUE
       )
 
-      #### HAUKES VERSION (START HERE)
+      ### START HERE (if you like an easy start)
 
       budget_files <- download_partner_budget_files()
 
       #kwb.utils::hsOpenWindowsExplorer(dirname(budget_files[1]))
 
-      #### HAUKES VERSION
-
       # Get information on costs from input files
       costs_list <- read_costs_from_input_files(budget_files)
-
-      # Save or reload
-      # sema.berlin::save_r_object(costs_list = costs_list, in_package = FALSE)
-      # costs_list <- sema.berlin::load_r_object("costs_list", in_package = FALSE)
 
       # Get all different cost views as a list of data frames
       costs <- get_all_cost_sheets(costs_list)
