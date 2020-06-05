@@ -154,6 +154,7 @@ if (FALSE)
       xls_file <- file.path(tdir_summary, "DWC_partner-budget.xlsx")
       openxlsx::write.xlsx(costs, xls_file)
 
+      kwb.utils::hsOpenWindowsExplorer(normalizePath(xls_file))
       ## 2) if successfull -> upload new file-info.csv
 
       # fs::dir_create(dirname(path_local_file_info))
@@ -292,6 +293,29 @@ get_all_cost_sheets <- function(costs_list)
   costs[c("overview", "short", "by_wp", "by_type", "by_country")]
 }
 
+# create_workbook_with_sheets -----------------------------------------------
+create_workbook_with_sheets <- function(sheet_contents)
+{
+  wb <- openxlsx::createWorkbook()
+
+  sheets <- names(sheet_contents)
+
+  for (sheet in sheets) {
+
+    openxlsx::addWorksheet(wb, sheet)
+
+    content <- sheet_contents[[sheet]]
+
+    openxlsx::writeData(wb, sheet = sheet, x = content)
+
+    cols <- seq_len(ncol(content))
+
+    openxlsx::setColWidths(wb, sheet = sheet, cols = cols, widths = "auto")
+  }
+
+  wb
+}
+
 # list_to_costs_overview -------------------------------------------------------
 list_to_costs_overview <- function(costs_list)
 {
@@ -330,7 +354,9 @@ list_to_costs_by_wp <- function(costs_list, costs_overview)
     ) %>%
     kwb.utils::moveColumnsToFront(c(
       "partner_id", "partner", "partner_type", "country"
-    ))
+    )) %>%
+    dplyr::select(- .data$Reimbursement_rate, .data$Reimbursement_rate) %>%
+    dplyr::select(- .data$Total_funded_cost, .data$Total_funded_cost)
 }
 
 # get_person_months_by_wp ------------------------------------------------------
@@ -430,7 +456,6 @@ prepare_cost_data_short <- function(costs_overview)
       author_email,
       contact_name,
       contact_email,
-      Reimbursement_rate,
       Participant
     )) %>%
     dplyr::select(-Reimbursement_rate, Reimbursement_rate) %>%
