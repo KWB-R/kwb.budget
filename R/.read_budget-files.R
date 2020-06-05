@@ -152,7 +152,8 @@ if (FALSE)
 
       ### Define path to xlsx output file
       xls_file <- file.path(tdir_summary, "DWC_partner-budget.xlsx")
-      openxlsx::write.xlsx(costs, xls_file)
+      workbook <- create_workbook_with_sheets(costs)
+      openxlsx::saveWorkbook(workbook, xls_file, overwrite = TRUE)
 
       kwb.utils::hsOpenWindowsExplorer(normalizePath(xls_file))
       ## 2) if successfull -> upload new file-info.csv
