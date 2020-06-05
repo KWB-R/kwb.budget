@@ -6,7 +6,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Helper function: append zero costs — append_zero_costs • kwb.budget</title>
+<title>Helper function: prepare costs by type — get_costs_by_type • kwb.budget</title>
 
 
 <!-- jquery -->
@@ -45,8 +45,8 @@
 
 
 
-<meta property="og:title" content="Helper function: append zero costs — append_zero_costs" />
-<meta property="og:description" content="Helper function: append zero costs" />
+<meta property="og:title" content="Helper function: prepare costs by type — get_costs_by_type" />
+<meta property="og:description" content="Helper function: prepare costs by type" />
 
 
 
@@ -135,34 +135,29 @@
 <div class="row">
   <div class="col-md-9 contents">
     <div class="page-header">
-    <h1>Helper function: append zero costs</h1>
-    <small class="dont-index">Source: <a href='https://github.com/KWB-R/kwb.budget/blob/master/R/get_costs_by_work_package.R'><code>R/get_costs_by_work_package.R</code></a></small>
-    <div class="hidden name"><code>append_zero_costs.Rd</code></div>
+    <h1>Helper function: prepare costs by type</h1>
+    <small class="dont-index">Source: <a href='https://github.com/KWB-R/kwb.budget/blob/master/R/get_costs_by_type.R'><code>R/get_costs_by_type.R</code></a></small>
+    <div class="hidden name"><code>get_costs_by_type.Rd</code></div>
     </div>
 
     <div class="ref-description">
-    <p>Helper function: append zero costs</p>
+    <p>Helper function: prepare costs by type</p>
     </div>
 
-    <pre class="usage"><span class='fu'>append_zero_costs</span>(<span class='no'>x</span>, <span class='no'>n_work_packages</span>)</pre>
+    <pre class="usage"><span class='fu'>get_costs_by_type</span>(<span class='no'>costs_overview</span>)</pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
     <colgroup><col class="name" /><col class="desc" /></colgroup>
     <tr>
-      <th>x</th>
-      <td><p>x</p></td>
-    </tr>
-    <tr>
-      <th>n_work_packages</th>
-      <td><p>number of work packages in EXCEL template
-(default: 7, as used for DWC)</p></td>
+      <th>costs_overview</th>
+      <td><p>costs data</p></td>
     </tr>
     </table>
 
     <h2 class="hasAnchor" id="value"><a class="anchor" href="#value"></a>Value</h2>
 
-    <p>data frame with zero costs</p>
+    <p>df with costs by type (e.g. SME, research, ..)</p>
 
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
