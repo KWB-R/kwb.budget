@@ -318,9 +318,6 @@ list_to_costs_by_wp <- function(costs_list, costs_overview)
     # Add indirect and total costs
     dplyr::rename(partner_id = partner, partner = partner_name_short) %>%
     dplyr::mutate(
-      Reimbursement_rate = 0.01 * as.numeric(
-        sub("%", "", .data$Reimbursement_rate)
-      ),
       Direct_cost = .data$cost.personnel +
         .data$cost.equipment +
         .data$cost.consumables +
@@ -422,10 +419,10 @@ to_cost_matrices <- function(costs_by_wp)
 }
 
 # prepare_cost_data_short ------------------------------------------------------
-prepare_cost_data_short <- function(costs_data)
+prepare_cost_data_short <- function(costs_overview)
 {
   # reduce table size
-  costs_data %>%
+  costs_overview %>%
     dplyr::select(-c(
       pic_number,
       partner_name,

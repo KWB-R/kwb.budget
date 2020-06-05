@@ -45,7 +45,7 @@ read_partner_budget_from_excel <- function(
     Direct_subcontracting_cost = ranges$range_direct["sum_subcontracting", "Cost.(EUR)"],
     Indirect_cost = ranges$range_indirect[["Cost.(EUR)"]],
     Total_cost = ranges$range_total[1, "Cost.(EUR)"],
-    Reimbursement_rate = general$reimbursement_rate,
+    Reimbursement_rate = as.numeric(general$reimbursement_rate),
     Total_funded_cost = ranges$range_total[2, "Cost.(EUR)"]
   )
 
