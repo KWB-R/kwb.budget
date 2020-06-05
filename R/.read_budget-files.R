@@ -19,8 +19,26 @@ if (FALSE)
 if (FALSE)
 {
   # 1) Get partner metadata
+
+
+
   partner_info <- read_partner_info()
+
   path_partners <- kwb.utils::getAttribute(partner_info, "path_partners")
+
+  # Due to bug in OnlyOffice-documentserver (saved changes in onlyoffice
+  # are not written back when editing
+  # https://help.nextcloud.com/t/documents-not-being-saved-when-editing-nextcloud-18-local-community-document-server-plugin/71382/4
+
+
+  #path_partners <- "~/../Downloads/DWH_Partners-LOI-EAB_List(5).xlsx"
+
+  partner_info <- openxlsx::read.xlsx(
+    xlsxFile = "~/../Downloads/DWH_Partners-LOI-EAB_List(5).xlsx",
+    sheet = "Partners-PIC-Main contact"
+  )
+
+
 
   # 3) Get budget template
   path_budget_template <- kwb.nextcloud::download_files(
