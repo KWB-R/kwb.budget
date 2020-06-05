@@ -221,13 +221,7 @@ if (FALSE)
 if (FALSE)
 {
   # get total costs by WP
-  costs_by_wp_summary <- costs_by_wp_data %>%
-    group_by(wp) %>%
-    summarise(
-      Total_cost = sum(Total_cost),
-      Total_funded_cost = sum(Total_funded_cost)
-    ) %>%
-    as.data.frame()
+
 
   costs_by_wp_summary
 
@@ -313,10 +307,12 @@ get_all_cost_sheets <- function(costs_list)
 
   # Generate detail view with one row per partner and work package
   # (direct costs by WP)
-  costs$by_wp <- list_to_costs_by_wp(costs_list, costs$overview)
+  costs$by_wp_and_partner <- list_to_costs_by_wp_and_partner(costs_list, costs$overview)
+
+  costs$by_wp <- list_to_costs_by_wp(costs$by_wp_and_partner)
 
   # Merge with simplified table withz costs
-  costs$short <- get_person_month_costs(costs$overview, costs$by_wp)
+  costs$overview_and_pm_per_wp <- get_person_month_costs(costs$overview, costs$by_wp_and_partner)
 
   # Prepare table with costs by company type
   costs$by_type <- kwb.budget::get_costs_by_type(costs$overview)
@@ -324,7 +320,7 @@ get_all_cost_sheets <- function(costs_list)
   # Prepare table with costs by country
   costs$by_country <- get_costs_by_country(costs$overview)
 
-  costs[c("overview", "short", "by_wp", "by_type", "by_country")]
+  costs[c("overview", "overview_and_pm_per_wp", "by_wp_and_partner", "by_wp", "by_type", "by_country")]
 }
 
 # create_workbook_with_sheets -----------------------------------------------
@@ -363,8 +359,8 @@ list_to_costs_overview <- function(costs_list)
     dplyr::left_join(partner_info, by = "partner_id")
 }
 
-# list_to_costs_by_wp ----------------------------------------------------------
-list_to_costs_by_wp <- function(costs_list, costs_overview)
+# list_to_costs_by_wp_and_partner-----------------------------------------------
+list_to_costs_by_wp_and_partner <- function(costs_list, costs_overview)
 {
   costs_overview <- kwb.utils::selectColumns(costs_overview, c(
     "partner_id", "partner_name_short", "partner_type", "country",
@@ -391,6 +387,18 @@ list_to_costs_by_wp <- function(costs_list, costs_overview)
     )) %>%
     dplyr::select(- .data$Reimbursement_rate, .data$Reimbursement_rate) %>%
     dplyr::select(- .data$Total_funded_cost, .data$Total_funded_cost)
+}
+
+# list_to_costs_by_wp-----------------------------------------------------------
+list_to_costs_by_wp <- function(costs_by_wp_and_partner)
+{
+costs_by_wp_and_partner %>%
+  dplyr::group_by(.data$wp) %>%
+  dplyr::summarise(
+    Total_cost = sum(.data$Total_cost),
+    Total_funded_cost = sum(.data$Total_funded_cost)
+  ) %>%
+  as.data.frame()
 }
 
 # get_person_months_by_wp ------------------------------------------------------
