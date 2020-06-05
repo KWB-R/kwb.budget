@@ -25,6 +25,7 @@ BugReports: https://github.com/KWB-R/kwb.budget/issues
 Imports:
     dplyr,
     fs,
+    kwb.nextcloud (>= 0.1.0),
     kwb.utils (>= 0.6.0),
     magrittr,
     parallel,
@@ -34,8 +35,7 @@ Imports:
 Suggests: 
     covr,
     knitr,
-    rmarkdown,
-    kwb.nextcloud (>= 0.1.0)
+    rmarkdown
 VignetteBuilder: 
     knitr
 Remotes:
