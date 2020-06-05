@@ -7,8 +7,9 @@
 append_zero_costs(x, n_work_packages)
 }
 \arguments{
-\item{x}{x
-@param n_work_packages number of work packages in EXCEL template
+\item{x}{x}
+
+\item{n_work_packages}{number of work packages in EXCEL template
 (default: 7, as used for DWC)}
 }
 \value{
