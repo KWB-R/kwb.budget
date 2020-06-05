@@ -1,5 +1,20 @@
 library(kwb.budget)
 
+# List versions on the cloud ---------------------------------------------------
+if (FALSE)
+{
+  kwb.budget::list_partner_budget_versions()
+
+  # Any available version of an xlsx file below budget folder
+  version_info <- kwb.nextcloud::list_file_versions(
+    "proposals/h2020_covid/60_Budget",
+    pattern = "\\.xlsx$",
+    recursive = TRUE
+  )
+
+  version_info
+}
+
 # Create Budget Files per Partner ----------------------------------------------
 if (FALSE)
 {
