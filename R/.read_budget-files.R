@@ -68,153 +68,97 @@ if (FALSE)
 # Download And Analyse Budget Files from Nextcloud -----------------------------
 if (FALSE)
 {
-  # 1) Download budget forms from Nextcloud
-
-  #path <- "proposals/bmbf_digital/Previous-projects/Budget"
-  path <- "proposals/h2020_covid/60_Budget/10_Filled_out_forms"
-
-  # 2) Generate budget files metadata (in order to detect updates, required for
-  #    automation)
-  # List files recursively (only xlsx or csv files)
-  file_info_latest <- kwb.nextcloud::list_files(
-    path = path,
-    pattern = "(xlsx|csv)$",
-    recursive = TRUE,
-    full_info = TRUE
-  )
-
-  # Check the result
-  #View(file_info_latest)
-
-  # 3) Upload file metadata to cloud (only once!)
+  # 1) Download budget files from Nextcloud
   tdir_root <-  kwb.nextcloud:::create_download_dir("nextcloud_")
   tdir_forms <- file.path(tdir_root, "10_filled_out_forms")
   tdir_summary <- file.path(tdir_root, "20_Summary_Files")
 
-  dir.create(tdir_forms)
-  dir.create(tdir_summary)
+  cloud_budget_files <- kwb.nextcloud::list_files(path = "proposals/h2020_covid/60_Budget",
+                            recursive = TRUE,
+                            full_info = TRUE)
 
-  is_this_the_first_time <- FALSE
+  kwb.nextcloud::download_files(hrefs = cloud_budget_files$href,
+                                target_dir = tdir_root)
+
+  file_info_old_path <-  file.path(tdir_summary, "file-info.csv")
+
+  file.exists(file_info_old_path)
+
+  # 3) Upload file metadata to cloud (only once!)
+  is_this_the_first_time <-   ! file.exists(file_info_latest_path)
 
   if (is_this_the_first_time) {
 
-    path_local_file_info <- file.path (tdir_summary, "file-info.csv")
+#
+#     fs::dir_create(dirname(path_local_file_info))
+#
+#     readr::write_csv(x = file_info_latest, path = path_local_file_info)
 
-    fs::dir_create(dirname(path_local_file_info))
-
-    readr::write_csv(x = file_info_latest, path = path_local_file_info)
-
-    kwb.nextcloud::upload_file(
-      file = path_local_file_info,
-      target_path = "proposals/h2020_covid/60_Budget/20_Summary_Files"
-    )
+    #### Make sure not to overwrite by chance
+    # kwb.nextcloud::upload_file(
+    #   file = path_local_file_info,
+    #   target_path = "proposals/h2020_covid/60_Budget/20_Summary_Files"
+    # )
 
   } else {
 
-    file_info_old_path <-  kwb.nextcloud::download_files(
-      paths = "proposals/h2020_covid/60_Budget/20_Summary_Files/file-info.csv",
-      target_dir = tdir_summary
+
+    my_filter <- stringr::str_detect(cloud_budget_files$file, pattern = "^10_Filled_out_forms")
+
+    file_info_latest <- cloud_budget_files[my_filter, ]
+
+    is_updated <- check_if_updated(file_info_latest, file_info_old)
+
+    if (is_updated) {
+    ### 1) write functions and add code for analysing (code below)
+
+    ## Filter out only budget XLSX files
+
+    budget_form_files <-  dir(tdir_forms, pattern = "\\.xlsx$", full.names = TRUE)
+
+    # Get information on costs from input files
+    costs_list <- read_costs_from_input_files(budget_form_files)
+
+    # Get all different cost views as a list of data frames
+    costs <- get_all_cost_sheets(costs_list)
+
+    ### Define path to xlsx output file
+    xls_file <- file.path(tdir_summary, "DWC_partner-budget.xlsx")
+    workbook <- create_workbook_with_sheets(costs)
+    openxlsx::saveWorkbook(workbook, xls_file, overwrite = TRUE)
+
+    kwb.utils::hsOpenWindowsExplorer(normalizePath(xls_file))
+    ## 2) if successfull -> upload new file-info.csv
+
+    file_info_latest_path <- file.path(tdir_summary, "file-info.csv")
+    readr::write_csv(x = file_info_latest,
+                     path = file_info_latest_path)
+
+
+
+    kwb.nextcloud::upload_file(
+      file = xls_file,
+      target_path = "proposals/h2020_covid/60_Budget/20_Summary_Files"
     )
 
-    file_info_old <- readr::read_csv(file = file_info_old_path)
+    kwb.nextcloud::upload_file(
+      file = file_info_latest_path,
+      target_path = "proposals/h2020_covid/60_Budget/20_Summary_Files"
+    )
 
-    select_cols <- c("fileid", "file", "lastmodified")
 
-    file_comparsion <- dplyr::full_join(
-      file_info_latest[select_cols],
-      file_info_old[select_cols],
-      by = "fileid"
-    ) %>%
-      dplyr::mutate(
-        msg = dplyr::if_else(
-          is.na(.data$file.x) & ! is.na(.data$file.y),
-          sprintf("ADDED: %s", .data$file.y),
-          dplyr::if_else(
-            ! is.na(.data$file.x) & is.na(.data$file.y),
-            sprintf("DELETED: %s", .data$file.x),
-            sprintf("UPDATED: %s", .data$file.x)
-          )
-        )
-      )
+  } else {
 
-    file_updated <- file_comparsion$lastmodified.x != file_comparsion$lastmodified.y |
-      is.na(file_comparsion$lastmodified.x) |
-      is.na(file_comparsion$lastmodified.y)
-
-    if (any(file_updated)) {
-
-      message(sprintf(
-        "The following files were updated:\n\n%s",
-        paste(file_comparsion$msg[which(file_updated)], collapse = "\n")
-      ))
-
-      ### 1) write functions and add code for analysing (code below)
-
-      # Provide the full paths by prepending the root path
-      full_paths <- file.path(
-        kwb.utils::getAttribute(file_info_latest, "root"),
-        file_info_latest$file
-      )
-
-      # Download the corresponding files to a temp folder below ~/../Downloads
-      system.time(
-        downloaded_files <- kwb.nextcloud:::download_files(
-          #href = file_info_latest$href,
-          paths =  full_paths,
-          target_dir = tdir_forms
-        )
-      )
-
-      ## Filter out only budget XLSX files
-      budget_files <- dir(
-        dirname(downloaded_files[1]), "DWH_partner-budget_[0-9][0-9].*xlsx$",
-        full.names = TRUE
-      )
-
-      ### START HERE (if you like an easy start)
-
-      budget_files <- download_partner_budget_files()
-
-      #kwb.utils::hsOpenWindowsExplorer(dirname(budget_files[1]))
-
-      # Get information on costs from input files
-      costs_list <- read_costs_from_input_files(budget_files)
-
-      # Get all different cost views as a list of data frames
-      costs <- get_all_cost_sheets(costs_list)
-
-      ### Define path to xlsx output file
-      xls_file <- file.path(tdir_summary, "DWC_partner-budget.xlsx")
-      workbook <- create_workbook_with_sheets(costs)
-      openxlsx::saveWorkbook(workbook, xls_file, overwrite = TRUE)
-
-      kwb.utils::hsOpenWindowsExplorer(normalizePath(xls_file))
-      ## 2) if successfull -> upload new file-info.csv
-
-      # fs::dir_create(dirname(path_local_file_info))
-      # readr::write_csv(x = file_info_latest, path = path_local_file_info)
-      # kwb.nextcloud::upload_file(
-      #   file = path_local_file_info,
-      #   target_path = "proposals/h2020_covid/60_Budget/20_Summary_Files"
-      # )
-
-      kwb.nextcloud::upload_file(
-        file = xls_file,
-        target_path = "proposals/h2020_covid/60_Budget/20_Summary_Files"
-      )
-
-    } else {
-
-      message(
-        "Going to sleep, because I have nothing to do! (budget files on ",
-        "the cloud have not changed since last execution!)"
-      )
-    }
-
-    ### test: open directory in explorer
-
-    #kwb.utils::hsOpenWindowsExplorer(normalizePath(tdir_root))
+    message(
+      "Going to sleep, because I have nothing to do! (budget files on ",
+      "the cloud have not changed since last execution!)"
+    )
   }
+
+  ### test: open directory in explorer
+
+  #kwb.utils::hsOpenWindowsExplorer(normalizePath(tdir_root))
+
 }
 
 # ANALYSIS ---------------------------------------------------------------------
@@ -296,6 +240,7 @@ if (FALSE)
 
   print(budget)
 }
+}
 
 # get_all_cost_sheets ----------------------------------------------------------
 get_all_cost_sheets <- function(costs_list)
@@ -346,6 +291,49 @@ create_workbook_with_sheets <- function(sheet_contents)
   wb
 }
 
+# check_if_updated -------------------------------------------------------------
+check_if_updated <- function(file_info_latest, file_info_old) {
+
+is_updated <- FALSE
+
+select_cols <- c("fileid", "file", "lastmodified")
+
+file_comparsion <- dplyr::full_join(
+  file_info_latest[select_cols],
+  file_info_old[select_cols],
+  by = "fileid"
+) %>%
+  dplyr::mutate(
+    msg = dplyr::if_else(
+      is.na(.data$file.x) & ! is.na(.data$file.y),
+      sprintf("DELETED: %s", .data$file.y),
+      dplyr::if_else(
+        ! is.na(.data$file.x) & is.na(.data$file.y),
+        sprintf("ADDED: %s", .data$file.x),
+        dplyr::if_else(
+          .data$file.x == .data$file.y,
+          "",
+        sprintf("UPDATED: %s", .data$file.x))
+    )
+  ))
+
+file_updated <- file_comparsion$lastmodified.x != file_comparsion$lastmodified.y |
+  is.na(file_comparsion$lastmodified.x) |
+  is.na(file_comparsion$lastmodified.y)
+
+if (any(file_updated)) {
+
+  message(sprintf(
+    "The following files were updated:\n\n%s",
+    paste(file_comparsion$msg[which(file_updated)], collapse = "\n")
+  ))
+  is_updated <- TRUE
+
+}
+
+is_updated
+}
+
 # list_to_costs_overview -------------------------------------------------------
 list_to_costs_overview <- function(costs_list)
 {
@@ -392,13 +380,13 @@ list_to_costs_by_wp_and_partner <- function(costs_list, costs_overview)
 # list_to_costs_by_wp-----------------------------------------------------------
 list_to_costs_by_wp <- function(costs_by_wp_and_partner)
 {
-costs_by_wp_and_partner %>%
-  dplyr::group_by(.data$wp) %>%
-  dplyr::summarise(
-    Total_cost = sum(.data$Total_cost),
-    Total_funded_cost = sum(.data$Total_funded_cost)
-  ) %>%
-  as.data.frame()
+  costs_by_wp_and_partner %>%
+    dplyr::group_by(.data$wp) %>%
+    dplyr::summarise(
+      Total_cost = sum(.data$Total_cost),
+      Total_funded_cost = sum(.data$Total_funded_cost)
+    ) %>%
+    as.data.frame()
 }
 
 # get_person_months_by_wp ------------------------------------------------------
