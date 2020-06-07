@@ -2,6 +2,7 @@
 
 export("%>%")
 export(append_zero_costs)
+export(compare_file_info_files)
 export(create_partners_budget_files)
 export(get_costs_by_type)
 export(get_costs_by_work_package)
@@ -40,3 +41,4 @@ importFrom(parallel,parLapply)
 importFrom(parallel,stopCluster)
 importFrom(rlang,.data)
 importFrom(stringr,str_extract)
+importFrom(utils,read.csv2)
