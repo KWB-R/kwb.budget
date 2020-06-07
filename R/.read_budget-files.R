@@ -85,7 +85,7 @@ if (FALSE)
   file.exists(file_info_old_path)
 
   # 3) Upload file metadata to cloud (only once!)
-  is_this_the_first_time <-   ! file.exists(file_info_latest_path)
+  is_this_the_first_time <-   ! file.exists(file_info_old_path)
 
   if (is_this_the_first_time) {
 
@@ -102,7 +102,7 @@ if (FALSE)
 
   } else {
 
-
+    file_info_old <- readr::read_csv(file_info_old_path)
     my_filter <- stringr::str_detect(cloud_budget_files$file, pattern = "^10_Filled_out_forms")
 
     file_info_latest <- cloud_budget_files[my_filter, ]
@@ -498,7 +498,7 @@ prepare_cost_data_short <- function(costs_overview)
 # read_partner_info ------------------------------------------------------------
 read_partner_info <- function(columns = NULL)
 {
-  path <- "proposals/h2020_covid/30_Partners/DWH_Partners-LOI-EAB_List.xlsx"
+  path <- "proposals/h2020_covid/30_Partners/DWH_Partners-LOI-EAB_List_V2.xlsx"
 
   path_partners <- kwb.nextcloud::download_files(paths = path)
 
