@@ -73,8 +73,8 @@ get_costs_by_sector <- function (costs_overview)
     cost_data_by_sector,
     c(
       "Total",
-      sum(cost_data_by_type$Total_funded_cost),
-      sum(cost_data_by_type$Total_funded_cost_p)
+      sum(cost_data_by_sector$Total_funded_cost),
+      sum(cost_data_by_sector$Total_funded_cost_p)
     )
   ) %>%
     dplyr::mutate(

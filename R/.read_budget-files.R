@@ -354,7 +354,7 @@ list_to_costs_overview <- function(costs_list)
 list_to_costs_by_wp_and_partner <- function(costs_list, costs_overview)
 {
   costs_overview <- kwb.utils::selectColumns(costs_overview, c(
-    "partner_id", "partner_name_short", "partner_type", "country",
+    "partner_id", "partner_name_short", "partner_type", "partner_sector", "country",
     "Reimbursement_rate"
   ))
 
