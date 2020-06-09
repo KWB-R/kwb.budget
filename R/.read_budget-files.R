@@ -389,7 +389,13 @@ list_to_costs_by_wp <- function(costs_by_wp_and_partner)
       Total_cost = sum(.data$Total_cost),
       Total_funded_cost = sum(.data$Total_funded_cost)
     ) %>%
+    dplyr::mutate(
+      Total_funded_cost_p = round(
+        100 * .data$Total_funded_cost / sum(.data$Total_funded_cost),
+        digits = 2
+      )) %>%
     as.data.frame()
+
 }
 
 # get_person_months_by_wp ------------------------------------------------------
@@ -421,15 +427,43 @@ get_person_month_costs <- function(costs_overview, costs_by_wp)
 # get_costs_by_country ---------------------------------------------------------
 get_costs_by_country <- function(costs_overview)
 {
-  costs_overview %>%
+  costs_by_country <- costs_overview %>%
     dplyr::group_by(country) %>%
     dplyr::summarise(
       Total_cost = sum(Total_cost),
       Total_funded_cost = sum(Total_funded_cost),
       n = dplyr::n()
     ) %>%
+    dplyr::mutate(
+      Total_funded_cost_p = round(
+        100 * .data$Total_funded_cost / sum(.data$Total_funded_cost),
+        digits = 2
+      )) %>%
     dplyr::arrange(dplyr::desc(.data$Total_funded_cost)) %>%
+    dplyr::select(.data$country,
+                  .data$n,
+                  .data$Total_cost,
+                  .data$Total_funded_cost,
+                  .data$Total_funded_cost_p) %>%
     as.data.frame()
+
+  # show funded costs by type
+  rbind(
+    costs_by_country,
+    c(
+      "Total",
+      sum(costs_by_country$n),
+      sum(costs_by_country$Total_cost),
+      sum(costs_by_country$Total_funded_cost),
+      sum(costs_by_country$Total_funded_cost_p)
+    )
+  ) %>%
+    dplyr::mutate(
+      n = as.numeric(.data$n),
+      Total_cost = as.numeric(.data$Total_cost),
+      Total_funded_cost = as.numeric(.data$Total_funded_cost),
+      Total_funded_cost_p = as.numeric(.data$Total_funded_cost_p)
+    )
 }
 
 # read_costs_from_input_files --------------------------------------------------
