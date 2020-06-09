@@ -262,10 +262,13 @@ get_all_cost_sheets <- function(costs_list)
   # Prepare table with costs by company type
   costs$by_type <- kwb.budget::get_costs_by_type(costs$overview)
 
+  # Prepare table with costs by sector type
+  costs$by_sector <- kwb.budget::get_costs_by_sector(costs$overview)
+
   # Prepare table with costs by country
   costs$by_country <- get_costs_by_country(costs$overview)
 
-  costs[c("overview", "overview_and_pm_per_wp", "by_wp_and_partner", "by_wp", "by_type", "by_country")]
+  costs[c("overview", "overview_and_pm_per_wp", "by_wp_and_partner", "by_wp", "by_type", "by_sector", "by_country")]
 }
 
 # create_workbook_with_sheets -----------------------------------------------
