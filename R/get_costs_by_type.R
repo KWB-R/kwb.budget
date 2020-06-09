@@ -27,7 +27,7 @@ get_costs_by_type <- function (costs_overview)
 
   # show funded costs by type
   rbind(
-    cost_data_by_sector,
+    cost_data_by_type,
     c(
       "Total",
       sum(cost_data_by_type$Total_funded_cost),

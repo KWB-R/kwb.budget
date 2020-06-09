@@ -342,7 +342,7 @@ list_to_costs_overview <- function(costs_list)
 {
   # Get partner metadata (for DWH proposal)
   partner_info <- read_partner_info(c(
-    "partner_id", "partner_name_short", "partner_type", "country"
+    "partner_id", "partner_name_short", "partner_type",  "partner_sector", "country"
   ))
 
   # Transform in dataframe
