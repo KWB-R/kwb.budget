@@ -1,305 +1,499 @@
-# remotes::install_github("kwb-r/kwb.utils")
-# remotes::install_github("kwb-r/kwb.db")
-# remotes::install_github("kwb-r/kwb.nextcloud@dev")
+library(kwb.budget)
 
-library(dplyr)
-library(kwb.utils)
-
-# define folder for bugdet related files
-#folder_bugdet <- "//servername/projekte$/PLANNING_PROJECTS/H2020_2018_Digital/Stage 2/60_Budget/"
-#folder_bugdet <- "C:/Users/username/Desktop/H2020_2018_Digital/Stage 2/60_Budget/"
-#folder_bugdet <- "//servername/projekte$/PLANNING_PROJECTS/H2020_2018_Digital/Stage 3 GA/50_Bugdet/"
-
-# List and download nextcloud files --------------------------------------------
+# List versions on the cloud ---------------------------------------------------
 if (FALSE)
 {
-  path <- "proposals/bmbf_digital/Previous-projects/Budget/10_Filled_out_forms"
+  kwb.budget::list_partner_budget_versions()
 
-  # List files in folder
-  file_info <- kwb.nextcloud:::list_files(path = path)
-
-  # Check the result
-  View(file_info)
-
-  # Sum of file sizes = folder size?
-  sum(file_info$size[-1]) == file_info$size[1]
-
-  # Filter for xlsx files
-  xls_paths <- grep("\\.xlsx", file_info$href, value = TRUE)
-
-  #paths <- gsub(sprintf("/remote.php/dav/files/%s/", kwb.nextcloud:::nextcloud_user()) , "", paths)
-
-  full_paths <- file.path(kwb.utils::getAttribute(file_info, "root"), xls_paths)
-
-  # Download xlsx files
-  system.time(
-    downloaded_files <- kwb.nextcloud:::download_files(paths = full_paths)
+  # Any available version of an xlsx file below budget folder
+  version_info <- kwb.nextcloud::list_file_versions(
+    "proposals/h2020_covid/60_Budget",
+    pattern = "\\.xlsx$",
+    recursive = TRUE
   )
 
-  download_dir <- dirname(downloaded_files[1])
-  kwb.utils::hsOpenWindowsExplorer(download_dir)
+  version_info
 }
 
-# Test reading files -----------------------------------------------------------
+# Create Budget Files per Partner ----------------------------------------------
 if (FALSE)
 {
-  # Define the path to an Excel file to read
-  #file <- "C:/Users/hsonne/Documents/../Downloads/nextcloud_3d5c2c853fd2/DWC_Partner_Budget_Arctik_FINAL.xlsx"
-  #file <- path.expand(downloaded_files[1])
+  # Get partner metadata
+  partner_info <- read_partner_info()
 
-  # Try to read the whole file
-  files <- dir(
-    "C:/Users/hsonne/Documents/../Downloads/nextcloud_3d5c2c853fd2", "xlsx$",
-    full.names = TRUE
+  path_partners <- kwb.utils::getAttribute(partner_info, "path_partners")
+
+  # Due to bug in OnlyOffice-documentserver (saved changes in onlyoffice
+  # are not written back when editing
+  # https://help.nextcloud.com/t/documents-not-being-saved-when-editing-nextcloud-18-local-community-document-server-plugin/71382/4
+
+
+  #path_partners <- "~/../Downloads/DWH_Partners-LOI-EAB_List(5).xlsx"
+
+  partner_info <- openxlsx::read.xlsx(
+    xlsxFile = "~/../Downloads/DWH_Partners-LOI-EAB_List(5).xlsx",
+    sheet = "Partners-PIC-Main contact"
   )
 
-  for (file in files) {
-    print(file)
-    kwb.budget:::read_partner_budget_from_excel(file)
+  # Get budget template
+  path_budget_template <- kwb.nextcloud::download_files(
+    paths = "proposals/h2020_covid/60_Budget/DWH_partner-budget_template.xlsx",
+    target_dir = dirname(path_partners)
+  )
+
+  # Create one file per partner with partner metadata
+  output_dir <- kwb.budget::create_partners_budget_files(
+    path_partners,
+    path_budget_template,
+    target_dir = file.path(dirname(path_partners), "10_Filled_out_forms"),
+    set_values = TRUE
+  )
+
+  # Open folder locally in Windows Explorer
+  kwb.utils::hsOpenWindowsExplorer(output_dir)
+
+  # Manually modify EXCEL files
+
+  # - Add more advanced rules (e.g. WP leader get XX PM for XX)
+  # - Add cell protection (otherwise R script will crash if someone deletes cells/rows) and
+  # - Upload to files to folder  "proposals/h2020_covid/60_Budget/10_Filled_out_forms"
+  # - Send email to partners with instructions (save under same name, ...)
+}
+
+# Download And Analyse Budget Files from Nextcloud -----------------------------
+if (FALSE)
+{
+  # 1) Download budget files from Nextcloud
+  tdir_root <-  kwb.nextcloud:::create_download_dir("nextcloud_")
+  tdir_forms <- file.path(tdir_root, "10_filled_out_forms")
+  tdir_summary <- file.path(tdir_root, "20_Summary_Files")
+
+  cloud_budget_files <- kwb.nextcloud::list_files(
+    path = "proposals/h2020_covid/60_Budget",
+    recursive = TRUE,
+    full_info = TRUE
+  )
+
+  kwb.nextcloud::download_files(
+    hrefs = cloud_budget_files$href,
+    target_dir = tdir_root
+  )
+
+  file_info_old_path <-  file.path(tdir_summary, "file-info.csv")
+
+  file.exists(file_info_old_path)
+
+  # 3) Upload file metadata to cloud (only once!)
+  is_this_the_first_time <-   ! file.exists(file_info_old_path)
+
+  if (is_this_the_first_time) {
+
+    # fs::dir_create(dirname(path_local_file_info))
+    #
+    # readr::write_csv(x = file_info_latest, path = path_local_file_info)
+
+    #### Make sure not to overwrite by chance
+    # kwb.nextcloud::upload_file(
+    #   file = path_local_file_info,
+    #   target_path = "proposals/h2020_covid/60_Budget/20_Summary_Files"
+    # )
+
+  } else {
+
+    file_info_old <- readr::read_csv(file_info_old_path)
+    my_filter <- stringr::str_detect(cloud_budget_files$file, pattern = "^10_Filled_out_forms")
+
+    file_info_latest <- cloud_budget_files[my_filter, ]
+
+    is_updated <- check_if_updated(file_info_latest, file_info_old)
+
+    if (is_updated) {
+      ### 1) write functions and add code for analysing (code below)
+
+      ## Filter out only budget XLSX files
+
+      budget_form_files <-  dir(tdir_forms, pattern = "\\.xlsx$", full.names = TRUE)
+
+      # Get information on costs from input files
+      costs_list <- read_costs_from_input_files(budget_form_files)
+
+      # Get all different cost views as a list of data frames
+      costs <- get_all_cost_sheets(costs_list)
+
+      ### Define path to xlsx output file
+      xls_file <- file.path(tdir_summary, "DWC_partner-budget.xlsx")
+      workbook <- create_workbook_with_sheets(costs)
+      openxlsx::saveWorkbook(workbook, xls_file, overwrite = TRUE)
+
+      kwb.utils::hsOpenWindowsExplorer(normalizePath(xls_file))
+      ## 2) if successfull -> upload new file-info.csv
+
+      file_info_latest_path <- file.path(tdir_summary, "file-info.csv")
+
+      readr::write_csv(x = file_info_latest, path = file_info_latest_path)
+
+      target_path <- "proposals/h2020_covid/60_Budget/20_Summary_Files"
+
+      kwb.nextcloud::upload_file(xls_file, target_path)
+      kwb.nextcloud::upload_file(file_info_latest_path, target_path)
+
+    } else {
+
+      message(
+        "Going to sleep, because I have nothing to do! (budget files on ",
+        "the cloud have not changed since last execution!)"
+      )
+    }
+
+    ### test: open directory in explorer
+
+    #kwb.utils::hsOpenWindowsExplorer(normalizePath(tdir_root))
   }
 
-  # Show available ranges named "range_..."
-  grep_range <- function(x) grep("^range_", x, value = TRUE)
-  region_names_1 <- grep_range(kwb.db::hsTables(file))
-  region_names_2 <- grep_range(openxlsx::getNamedRegions(file))
+  # ANALYSIS ---------------------------------------------------------------------
+  if (FALSE)
+  {
+    # get total costs by WP
+    costs_by_wp_summary
 
-  # Same ranges with both methods?
-  identical(region_names_1, region_names_2)
+    par(mfrow = c(2,2))
 
-  # Read cell region, method 1: using RODBC
-  read_region_1 <- function(x) {
-    #kwb.utils::removeEmptyColumns(
-    kwb.db::hsGetTable(file, x, stringsAsFactors = FALSE)
-    #)
-  }
-
-  # Read cell region, method 2: using openxlsx
-  read_region_2 <- function(x) {
-    openxlsx::read.xlsx(
-      file, namedRegion = x, skipEmptyCols = FALSE, sep.names = " "
+    plot(
+      costs_by_wp_summary$wp,
+      costs_by_wp_summary$Total_cost,
+      pch = 16, las = 1,
+      xlab = "WP",
+      ylab = "",
+      yaxt = "n",
+      main = "",
+      col = "blue",
+      cex.main = 0.7
     )
+
+    points(
+      costs_by_wp_summary$wp,
+      costs_by_wp_summary$Total_funded_cost,
+      col = "green"
+    )
+
+    grid()
+
+    axis(2, las = 2, cex = 0.4)
+
+
+    barplot(
+      costs$Total_funded_cost, names.arg =  costs$partner_short_name, las = 2
+    )
+
+    grid()
+
+    labels = paste0(
+      "Requested grant €:",
+      round(sum(costs_by_wp_summary$Total_funded_cost), 0),
+      "\n Max. grant €:",
+      round(sum(costs_by_wp_summary$Total_cost), 0)
+    )
+
+    plot(
+      1, xaxt = "n", yaxt = "n", xlab = "", ylab = "", type = "n",
+      frame.plot = FALSE
+    )
+
+    text(1, 1, labels = labels)
+
+    budget_merge_country <- budget_merge %>%
+      group_by(Country.y) %>%
+      summarise(
+        Total_cost = sum(Total_cost),
+        Total_funded_cost = sum(Total_funded_cost)
+      ) %>%
+      as.data.frame()
+
+    budget_merge_type <- budget_merge %>%
+      group_by(Type) %>%
+      summarise(
+        Total_cost = sum(Total_cost),
+        Total_funded_cost = sum(Total_funded_cost)
+      ) %>%
+      as.data.frame()
+
+    library(gridExtra)
+    library(grid)
+
+    grid.table(budget_merge_country)
+    grid.table(budget_merge_type)
+
+    cost_matrices <- to_cost_matrices(costs_by_wp)
+
+    print(budget)
   }
-
-  # All region names
-  (region_names <- region_names_1)
-
-  regions_data_1 <- lapply(region_names, read_region_1)
-  regions_data_2 <- lapply(region_names_2, read_region_2)
-
-  diffobj::diffStr(regions_data_1, regions_data_2)
 }
 
-# DATA PREPARATION -------------------------------------------------------------
-if (FALSE)
+# get_all_cost_sheets ----------------------------------------------------------
+get_all_cost_sheets <- function(costs_list)
 {
+  costs <- list()
 
-  # input costs files
-  files <- dir(download_dir, "xlsx$",
-               full.names = TRUE, all.files = FALSE)
+  # Generate overview with one row per partner
+  costs$overview <- list_to_costs_overview(costs_list)
 
-  # get costs data from input files
-  system.time(costs_list <- lapply(seq_along(files), function(i) {
-
-    #i=1
-    file <- files[i]
-    message(sprintf("Reading '%s' (%d/%d)...", basename(file), i, length(files)))
-    try(kwb.budget::read_partner_budget_from_excel(file))
-
-
-  }))
-
-  # check if errors
-  has_error <- sapply(costs_list, inherits, "try-error")
-  print(has_error)
-
-  # select participants without error
-  costs_list <- costs_list[! has_error]
-
-  # transform in dataframe
-  costs <- rbindAll(costs_list) %>% select(-Country)
-
-  # table with direct costs by WP
-  costs_by_wp <- get_costs_by_work_package(costs_list)
-  head(costs_by_wp)
-
-
-  # add reimbursement rate
-  costs_by_wp <- merge(costs_by_wp,
-                       costs[, c("partner_short_name", "Reimbursement_rate")],
-                       by.x = "partner", by.y = "partner_short_name")
-
-  # add indirect and total costs
-  costs_by_wp <- costs_by_wp %>%
-    mutate(Reimbursement_rate = 0.01 * as.numeric(sub("%", "", costs_by_wp$Reimbursement_rate)),
-           Direct_cost = cost.personnel + cost.equipment + cost.consumables + cost.subcontracting,
-           Indirect_cost = 0.25 * (Direct_cost - cost.subcontracting),
-           Total_cost = Direct_cost + Indirect_cost,
-           Total_funded_cost = Reimbursement_rate * Total_cost)
-
-
-  # load partner info
-  file_partner_info <- file.path(
-    paste0(folder_bugdet, "20_Summary_Files"),
-    "Partner_country_type.csv"
+  # Generate detail view with one row per partner and work package
+  # (direct costs by WP)
+  costs$by_wp_and_partner <- list_to_costs_by_wp_and_partner(
+    costs_list, costs$overview
   )
-  partner_info <- read.csv2(file_partner_info)
 
-  # check if names are the same in the two files before merging
-  check <- costs$partner_short_name %in% partner_info$Partner_short_name
-  costs$partner_short_name[!check]
+  costs$by_wp <- list_to_costs_by_wp(costs$by_wp_and_partner)
 
-  # create merge costs and costs_by_wp
-  costs_data <- merge(costs, partner_info, by.x = "partner_short_name", by.y = "Partner_short_name")
-  head(costs_data)
+  # Merge with simplified table withz costs
+  costs$overview_and_pm_per_wp <- get_person_month_costs(
+    costs$overview, costs$by_wp_and_partner
+  )
 
-  costs_data_by_wp <- merge(costs_by_wp, partner_info, by.x = "partner", by.y = "Partner_short_name")
-  head(costs_data_by_wp)
+  # Prepare table with costs by company type
+  costs$by_type <- kwb.budget::get_costs_by_type(costs$overview)
 
-  # prepare simplified table with costs
-  costs_data_short <- prepare_cost_data_short(costs_data)
-  costs_data_short %>% select(partner_short_name, Total_funded_cost)
+  # Prepare table with costs by sector type
+  costs$by_sector <- kwb.budget::get_costs_by_sector(costs$overview)
 
-  # prepare table with person month for each wp
-  pm_data_by_wp <- costs_data_by_wp %>%
-    select(partner, wp, person_months.personnel) %>%
-    tidyr::spread(wp, person_months.personnel)
+  # Prepare table with costs by country
+  costs$by_country <- get_costs_by_country(costs$overview)
 
-  # merge with simplified table withz costs
-  costs_data_short <- merge(costs_data_short, pm_data_by_wp,
-                            by.x = "partner_short_name", by.y = "partner") %>%
-    select(-Total_funded_cost, Total_funded_cost)
-
-  # prepare table with costs by company type
-  costs_data_by_type <- prepare_cost_data_by_type(costs_data_short)
-  costs_data_by_type
-
-  ### save outputs
-  version_num <- 7
-
-  folder_out <- paste0(folder_bugdet, "20_Summary_Files")
-  file_out <- file.path(folder_out, paste0("V", version_num, "_DWC_Costs"))
-
-  write.csv2(costs_data, paste0(file_out, ".csv"))
-  save(costs_data, file = paste0(file_out, ".rdata"))
-
-  write.csv2(costs_data_by_wp, paste0(file_out, "_by_wp.csv"))
-  save(costs_data_by_wp, file = paste0(file_out, "_by_wp.rdata"))
-
-  write.csv2(costs_data_short, paste0(file_out, "_short.csv"))
-  write.csv2(costs_data_by_type, paste0(file_out, "_by_type.csv"))
+  costs[c(
+    "overview", "overview_and_pm_per_wp", "by_wp_and_partner", "by_wp",
+    "by_type", "by_sector", "by_country"
+  )]
 }
 
-# ANALYSIS ---------------------------------------------------------------------
-if (FALSE) {
-
-  # get total costs by WP
-  costs_by_wp_summary <- costs_by_wp_data %>%
-    group_by(wp) %>%
-    summarise(Total_cost = sum(Total_cost),
-              Total_funded_cost = sum(Total_funded_cost)) %>%
-    as.data.frame()
-
-  costs_by_wp_summary
-
-  par(mfrow = c(2,2))
-
-  plot(costs_by_wp_summary$wp,
-       costs_by_wp_summary$Total_cost,
-       pch = 16, las = 1,
-       xlab = "WP",
-       ylab = "",
-       yaxt = "n",
-       main = "",
-       col = "blue",
-       cex.main = 0.7)
-  points(costs_by_wp_summary$wp, costs_by_wp_summary$Total_funded_cost, col = "green")
-
-  grid()
-
-  axis(2, las = 2, cex = 0.4)
-
-
-  barplot(costs$Total_funded_cost, names.arg =  costs$partner_short_name,
-          las = 2)
-  grid()
-
-  labels = paste0("Requested grant €:",
-                  round(sum(costs_by_wp_summary$Total_funded_cost), 0),
-                  "\n Max. grant €:",
-                  round(sum(costs_by_wp_summary$Total_cost), 0))
-
-
-  plot(1, xaxt = "n", yaxt = "n", xlab = "", ylab = "", type = "n", frame.plot = FALSE)
-  text(1, 1, labels = labels)
-
-
-  budget_merge_country <- budget_merge %>%
-    group_by(Country.y) %>%
-    summarise(Total_cost = sum(Total_cost),
-              Total_funded_cost = sum(Total_funded_cost)) %>%
-    as.data.frame()
-
-  budget_merge_type <- budget_merge %>%
-    group_by(Type) %>%
-    summarise(Total_cost = sum(Total_cost),
-              Total_funded_cost = sum(Total_funded_cost)) %>%
-    as.data.frame()
-
-  library(gridExtra)
-  library(grid)
-
-  grid.table(budget_merge_country)
-
-  grid.table(budget_merge_type)
-
-  #
-
-  cost_matrices <- to_cost_matrices(costs_by_wp)
-
-  print(budget)
-}
-
-# get_costs_by_work_package ----------------------------------------------------
-get_costs_by_work_package <- function(costs)
+# create_workbook_with_sheets -----------------------------------------------
+create_workbook_with_sheets <- function(sheet_contents)
 {
-  `%>%` <- magrittr::`%>%`
+  wb <- openxlsx::createWorkbook()
 
-  collect_lines_with_work_package <- function(x, name) {
-    result <- lapply(x, getAttribute, name)
-    result <- lapply(result, append_zero_costs)
-    result <- rbindAll(result)
-    result$cost <- kwb.utils::defaultIfNA(result$cost, 0)
-    result[! is.na(result$wp), ]
+  sheets <- names(sheet_contents)
+
+  for (sheet in sheets) {
+
+    openxlsx::addWorksheet(wb, sheet)
+
+    content <- sheet_contents[[sheet]]
+
+    openxlsx::writeData(wb, sheet = sheet, x = content)
+
+    cols <- seq_len(ncol(content))
+
+    openxlsx::setColWidths(wb, sheet = sheet, cols = cols, widths = "auto")
   }
 
-  personnel <- collect_lines_with_work_package(costs, "personnel")
-  equipment <- collect_lines_with_work_package(costs, "equipment")
-  consumables <- collect_lines_with_work_package(costs, "consumables")
-  subcontracting <- collect_lines_with_work_package(costs, "subcontracting")
-
-  sum_by_work_package <- function(x) {
-    x %>% dplyr::group_by(partner, wp) %>% dplyr::summarise(cost = sum(cost))
-  }
-
-  sum_pm_by_work_package <- function(x) {
-    x %>% dplyr::group_by(partner, wp) %>% dplyr::summarise(person_months = sum(person_months, na.rm = TRUE))
-  }
-
-  kwb.utils::mergeAll(by = c("partner", "wp"), list(
-    personnel = sum_pm_by_work_package(personnel),
-    personnel = sum_by_work_package(personnel),
-    equipment = sum_by_work_package(equipment),
-    consumables = sum_by_work_package(consumables),
-    subcontracting = sum_by_work_package(subcontracting)
-  ))
+  wb
 }
 
-# append_zero_costs ------------------------------------------------------------
-append_zero_costs <- function(x)
+# check_if_updated -------------------------------------------------------------
+check_if_updated <- function(file_info_latest, file_info_old)
 {
-  kwb.utils::safeRowBind(x, kwb.utils::noFactorDataFrame(
-    partner = unique(x$partner), wp = 1:7, cost = 0
+  is_updated <- FALSE
+
+  select_cols <- c("fileid", "file", "lastmodified")
+
+  file_comparsion <- dplyr::full_join(
+    file_info_latest[select_cols],
+    file_info_old[select_cols],
+    by = "fileid"
+  ) %>%
+    dplyr::mutate(
+      msg = dplyr::if_else(
+        is.na(.data$file.x) & ! is.na(.data$file.y),
+        sprintf("DELETED: %s", .data$file.y),
+        dplyr::if_else(
+          ! is.na(.data$file.x) & is.na(.data$file.y),
+          sprintf("ADDED: %s", .data$file.x),
+          dplyr::if_else(
+            .data$file.x == .data$file.y,
+            "",
+            sprintf("UPDATED: %s", .data$file.x)
+          )
+        )
+      )
+    )
+
+  file_updated <-
+    file_comparsion$lastmodified.x != file_comparsion$lastmodified.y |
+    is.na(file_comparsion$lastmodified.x) |
+    is.na(file_comparsion$lastmodified.y)
+
+  if (any(file_updated)) {
+
+    message(sprintf(
+      "The following files were updated:\n\n%s",
+      paste(file_comparsion$msg[which(file_updated)], collapse = "\n")
+    ))
+
+    is_updated <- TRUE
+  }
+
+  is_updated
+}
+
+# list_to_costs_overview -------------------------------------------------------
+list_to_costs_overview <- function(costs_list)
+{
+  # Get partner metadata (for DWH proposal)
+  partner_info <- read_partner_info(c(
+    "partner_id", "partner_name_short", "partner_type",  "partner_sector",
+    "country"
   ))
+
+  # Transform in dataframe
+  kwb.utils::rbindAll(costs_list) %>%
+    dplyr::left_join(partner_info, by = "partner_id")
+}
+
+# list_to_costs_by_wp_and_partner-----------------------------------------------
+list_to_costs_by_wp_and_partner <- function(costs_list, costs_overview)
+{
+  costs_overview <- kwb.utils::selectColumns(costs_overview, c(
+    "partner_id", "partner_name_short", "partner_type", "partner_sector",
+    "country", "Reimbursement_rate"
+  ))
+
+  kwb.budget::get_costs_by_work_package(costs_list, n_work_packages = 6) %>%
+    merge(costs_overview, by.x = "partner", by.y = "partner_id") %>%
+    # Add indirect and total costs
+    dplyr::rename(partner_id = partner, partner = partner_name_short) %>%
+    dplyr::mutate(
+      Direct_cost = .data$cost.personnel +
+        .data$cost.equipment +
+        .data$cost.consumables +
+        .data$cost.subcontracting,
+      Indirect_cost = 0.25 * (
+        .data$Direct_cost - .data$cost.subcontracting
+      ),
+      Total_cost = .data$Direct_cost + .data$Indirect_cost,
+      Total_funded_cost = .data$Reimbursement_rate * .data$Total_cost
+    ) %>%
+    kwb.utils::moveColumnsToFront(c(
+      "partner_id", "partner", "partner_type", "country"
+    )) %>%
+    dplyr::select(- .data$Reimbursement_rate, .data$Reimbursement_rate) %>%
+    dplyr::select(- .data$Total_funded_cost, .data$Total_funded_cost)
+}
+
+# list_to_costs_by_wp-----------------------------------------------------------
+list_to_costs_by_wp <- function(costs_by_wp_and_partner)
+{
+  costs_by_wp_and_partner %>%
+    dplyr::group_by(.data$wp) %>%
+    dplyr::summarise(
+      Total_cost = sum(.data$Total_cost),
+      Total_funded_cost = sum(.data$Total_funded_cost)
+    ) %>%
+    dplyr::mutate(
+      Total_funded_cost_p = round(
+        100 * .data$Total_funded_cost / sum(.data$Total_funded_cost),
+        digits = 2
+      )
+    ) %>%
+    as.data.frame()
+}
+
+# get_person_months_by_wp ------------------------------------------------------
+get_person_months_by_wp <- function(costs_by_wp)
+{
+  costs_by_wp %>%
+    dplyr::select(.data$partner, .data$wp, .data$person_months.personnel) %>%
+    tidyr::spread(.data$wp, .data$person_months.personnel)
+}
+
+# get_person_month_costs -------------------------------------------------------
+get_person_month_costs <- function(costs_overview, costs_by_wp)
+{
+  # Prepare simplified table with costs
+  costs_short <- prepare_cost_data_short(costs_overview)
+
+  # Prepare table with person month for each wp
+  pm_data_by_wp <- get_person_months_by_wp(costs_by_wp)
+
+  merge(
+    costs_short, pm_data_by_wp,
+    by.x = "partner_name_short",
+    by.y = "partner",
+    all = TRUE
+  ) %>%
+    dplyr::select(-Total_funded_cost, Total_funded_cost)
+}
+
+# get_costs_by_country ---------------------------------------------------------
+get_costs_by_country <- function(costs_overview)
+{
+  costs_by_country <- costs_overview %>%
+    dplyr::group_by(country) %>%
+    dplyr::summarise(
+      Total_cost = sum(Total_cost),
+      Total_funded_cost = sum(Total_funded_cost),
+      n = dplyr::n()
+    ) %>%
+    dplyr::mutate(
+      Total_funded_cost_p = round(
+        100 * .data$Total_funded_cost / sum(.data$Total_funded_cost),
+        digits = 2
+      )) %>%
+    dplyr::arrange(dplyr::desc(.data$Total_funded_cost)) %>%
+    dplyr::select(
+      .data$country,
+      .data$n,
+      .data$Total_cost,
+      .data$Total_funded_cost,
+      .data$Total_funded_cost_p
+    ) %>%
+    as.data.frame()
+
+  # show funded costs by type
+  rbind(
+    costs_by_country,
+    c(
+      "Total",
+      sum(costs_by_country$n),
+      sum(costs_by_country$Total_cost),
+      sum(costs_by_country$Total_funded_cost),
+      sum(costs_by_country$Total_funded_cost_p)
+    )
+  ) %>%
+    dplyr::mutate(
+      n = as.numeric(.data$n),
+      Total_cost = as.numeric(.data$Total_cost),
+      Total_funded_cost = as.numeric(.data$Total_funded_cost),
+      Total_funded_cost_p = as.numeric(.data$Total_funded_cost_p)
+    )
+}
+
+# read_costs_from_input_files --------------------------------------------------
+read_costs_from_input_files <- function(budget_files)
+{
+  costs_list <- setNames(
+    object = kwb.budget::read_partners_budget_from_excel(
+      budget_files,
+      n_work_packages = 6,
+      run_parallel = FALSE # false = slower but with more debug messages
+    ),
+    basename(budget_files)
+  )
+
+  # There are warnings: "No data found on worksheet.", why?
+
+  # Check for errors
+  has_error <- sapply(costs_list, inherits, "try-error")
+
+  if (any(has_error)) {
+
+    kwb.utils::printIf(TRUE, has_error)
+
+    print(table(has_error))
+
+    message("Removing ", sum(has_error), " elements with errors")
+  }
+
+  # Exclude elements that caused errors
+  costs_list[! has_error]
 }
 
 # to_cost_matrices -------------------------------------------------------------
@@ -307,7 +501,9 @@ to_cost_matrices <- function(costs_by_wp)
 {
   to_cost_matrix <- function(x, column) {
     input <- kwb.utils::selectColumns(x, c(names(x)[1:2], column))
-    kwb.utils::countOrSum(input, by = names(input)[1:2], sum.up = names(input)[3])
+    kwb.utils::countOrSum(
+      input, by = names(input)[1:2], sum.up = names(input)[3]
+    )
   }
 
   cost_columns <- kwb.utils::toNamedList(names(costs_by_wp)[-(1:2)])
@@ -315,40 +511,55 @@ to_cost_matrices <- function(costs_by_wp)
   lapply(cost_columns, to_cost_matrix, x = costs_by_wp)
 }
 
-# prepare_cost_data_short ----------------------------------------------------
-prepare_cost_data_short <- function(costs_data){
-
+# prepare_cost_data_short ------------------------------------------------------
+prepare_cost_data_short <- function(costs_overview)
+{
   # reduce table size
-  costs_data <- costs_data %>%
-    select(- c(pic_number, pic_number, partner_name, author_name,
-               author_email, contact_name, contact_email,
-               reimbursement_rate, Participant)) %>%
-    select(-Reimbursement_rate, Reimbursement_rate) %>%
-    select(-Total_funded_cost, Total_funded_cost)
-
-  costs_data
-
+  costs_overview %>%
+    dplyr::select(-c(
+      pic_number,
+      partner_name,
+      author_name,
+      author_email,
+      contact_name,
+      contact_email,
+      Participant
+    )) %>%
+    dplyr::select(-Reimbursement_rate, Reimbursement_rate) %>%
+    dplyr::select(-Total_funded_cost, Total_funded_cost) %>%
+    kwb.utils::moveColumnsToFront(c(
+      "filename", "partner_id", "partner_name_short", "partner_type", "country"
+    ))
 }
-# prepare_cost_data_by_type --------------------------------------------------
-prepare_cost_data_by_type <- function (costs_data){
 
-  # create summary by participant type
-  cost_data_by_type <- costs_data %>%
-    group_by(Type) %>%
-    summarize(Total_funded_cost = round(sum(Total_funded_cost), 2)) %>%
-    mutate(Total_funded_cost_p = round(100 * Total_funded_cost / sum(Total_funded_cost), 2),
-           Type = as.character(Type)) %>%
-    as.data.frame()
+# read_partner_info ------------------------------------------------------------
+read_partner_info <- function(columns = NULL)
+{
+  path <- "proposals/h2020_covid/30_Partners/DWH_Partners-LOI-EAB_List_V2.xlsx"
 
-  # show funded costs by type
-  cost_data_by_type <- rbind(cost_data_by_type,
-                             c("Total",
-                               sum(cost_data_by_type$Total_funded_cost),
-                               sum(cost_data_by_type$Total_funded_cost_p))
-  ) %>%
-    mutate(Total_funded_cost = as.numeric(Total_funded_cost),
-           Total_funded_cost_p = as.numeric(Total_funded_cost_p))
+  path_partners <- kwb.nextcloud::download_files(paths = path)
 
-  cost_data_by_type
+  result <- openxlsx::read.xlsx(
+    xlsxFile = path_partners,
+    sheet = "Partners-PIC-Main contact"
+  )
 
+  if (! is.null(columns)) {
+    result <- kwb.utils::selectColumns(result, columns)
+  }
+
+  structure(result, path_partners = path_partners)
+}
+
+# download_partner_budget_files ------------------------------------------------
+download_partner_budget_files <- function()
+{
+  file_info <- kwb.nextcloud::list_files(
+    "proposals/h2020_covid/60_Budget/10_Filled_out_forms",
+    pattern = "DWH_partner-budget_\\d\\d",
+    recursive = TRUE,
+    full_info = TRUE
+  )
+
+  kwb.nextcloud::download_files(file_info$href)
 }

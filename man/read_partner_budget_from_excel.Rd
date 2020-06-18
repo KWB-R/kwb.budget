@@ -4,10 +4,13 @@
 \alias{read_partner_budget_from_excel}
 \title{Read Partner Budget From Excel File}
 \usage{
-read_partner_budget_from_excel(file, dbg = TRUE)
+read_partner_budget_from_excel(file, n_work_packages = 7, dbg = TRUE)
 }
 \arguments{
 \item{file}{full path to EXCEL file}
+
+\item{n_work_packages}{number of work packages in EXCEL template
+(default: 7, as used for DWC)}
 
 \item{dbg}{debug message (default: TRUE)}
 }

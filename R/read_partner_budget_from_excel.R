@@ -1,12 +1,17 @@
 #' Read Partner Budget From Excel File
 #'
 #' @param file full path to EXCEL file
+#' @param n_work_packages number of work packages in EXCEL template
+#' (default: 7, as used for DWC)
 #' @param dbg debug message (default: TRUE)
 #' @return list with imported EXCEL budget file data
 #' @export
-#' @importFrom kwb.utils noFactorDataFrame renameAndSelect removeColumns toLookupTable
+#' @importFrom kwb.utils noFactorDataFrame renameAndSelect removeColumns toLookupTable extractSubstring
+#' @importFrom stringr str_extract
 #'
-read_partner_budget_from_excel <- function(file, dbg = TRUE)
+read_partner_budget_from_excel <- function(
+  file, n_work_packages = 7, dbg = TRUE
+)
 {
   #kwb.utils::assignPackageObjects("kwb.budget")
   #kwb.utils::assignArgumentDefaults(read_partner_budget_from_excel)
@@ -26,16 +31,21 @@ read_partner_budget_from_excel <- function(file, dbg = TRUE)
     ranges$range_direct, "Key", dbg = FALSE
   )
 
+  filename <- basename(file)
+
   budget <- kwb.utils::noFactorDataFrame(
+    filename = filename,
+    partner_id = as.numeric(stringr::str_extract(filename, "[0-9][0-9]")),
+    #Participant	= kwb.utils::extractSubstring("_([^_]+)\\.xlsx$", filename, 1),
     Participant	= general$partner_short_name,
-    Country	= "",
+    #Country	= "",
     #Direct_personnel_costs = sum(ranges$range_personnel[["Cost (EUR)"]]),
     Direct_personnel_cost = ranges$range_direct["sum_personnel", "Cost.(EUR)"],
     Direct_other_cost = sum(ranges$range_direct[2:4, "Cost.(EUR)"]),
     Direct_subcontracting_cost = ranges$range_direct["sum_subcontracting", "Cost.(EUR)"],
     Indirect_cost = ranges$range_indirect[["Cost.(EUR)"]],
     Total_cost = ranges$range_total[1, "Cost.(EUR)"],
-    Reimbursement_rate = general$reimbursement_rate,
+    Reimbursement_rate = as.numeric(general$reimbursement_rate),
     Total_funded_cost = ranges$range_total[2, "Cost.(EUR)"]
   )
 
@@ -47,10 +57,12 @@ read_partner_budget_from_excel <- function(file, dbg = TRUE)
 
   wp_acronyms <- substr(personnel$wp_name, 1, 3)
 
-  stopifnot(identical(wp_acronyms, paste0("WP", 1:7)))
+  wp_id <- seq_len(n_work_packages)
+
+  stopifnot(identical(wp_acronyms, paste0("WP", wp_id)))
 
   personnel <- kwb.utils::removeColumns(
-    kwb.utils::setColumns(personnel, wp = 1:7, dbg = FALSE),
+    kwb.utils::setColumns(personnel, wp = wp_id, dbg = FALSE),
     columns = "wp_name"
   )
 
@@ -80,11 +92,21 @@ read_partner_budget_from_excel <- function(file, dbg = TRUE)
   )))
 
   bind_partner <- function(x) {
-    cbind(kwb.utils::noFactorDataFrame(partner = general$partner_short_name), x)
+    cbind(kwb.utils::noFactorDataFrame(partner = budget$partner_id), x)
   }
 
+  result <- cbind(
+    kwb.utils::removeColumns(general, c(
+      "reimbursement_rate", "partner_short_name"
+    )),
+    budget,
+    stringsAsFactors = FALSE
+  )
+
+  main_columns <- c("filename", "partner_id", "Participant", "partner_name")
+
   structure(
-    cbind(general, budget, stringsAsFactors = FALSE),
+    kwb.utils::moveColumnsToFront(result, main_columns),
     personnel = bind_partner(personnel),
     consumables = bind_partner(consumables),
     equipment = bind_partner(equipment),
