@@ -73,6 +73,9 @@ read_partner_budget_from_excel <- function(
     "Cost.(EUR)" = "cost"
   )))
 
+  # Replace line feed character with "."
+  names(ranges$range_equipment) <- gsub("&#xA;", ".", names(ranges$range_equipment))
+
   (equipment <- kwb.utils::renameAndSelect(ranges$range_equipment, list(
     "Position" = "position",
     #"Description_Please specify type, may also comprise existing equi" = "item",
@@ -135,10 +138,12 @@ get_named_excel_ranges <- function(file)
 
   failed <- sapply(ranges, inherits, "try-error")
 
-  if (any(failed)) warning(
-    "The following named range(s) could not be read: ",
-    kwb.utils::stringList(names(which(failed)))
-  )
+  if (any(failed)) {
+    warning(
+      "The following named range(s) could not be read: ",
+      kwb.utils::stringList(names(which(failed)))
+    )
+  }
 
   ranges[! failed]
 }
