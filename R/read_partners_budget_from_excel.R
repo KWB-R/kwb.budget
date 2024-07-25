@@ -12,9 +12,9 @@
 #' @importFrom parallel detectCores makeCluster parLapply stopCluster
 #'
 read_partners_budget_from_excel <- function(
-  files,
-  n_work_packages = 7,
-  run_parallel = TRUE
+    files,
+    n_work_packages = 7,
+    run_parallel = TRUE
 )
 {
   if (run_parallel) {
@@ -22,35 +22,30 @@ read_partners_budget_from_excel <- function(
     ncores <- parallel::detectCores() - 1L
 
     cl <- parallel::makeCluster(ncores)
+    on.exit(parallel::stopCluster(cl))
 
     msg <- sprintf("Importing %d budget files from partners", length(files))
 
     kwb.utils::catAndRun(
       messageText = msg,
-      expr = parallel::parLapply(
-        cl, files, function(file) {
-          try(
-            kwb.budget::read_partner_budget_from_excel(
-              file, n_work_packages = n_work_packages
-            )
-          )
-        }
-      )
+      expr = parallel::parLapply(cl, files, function(file) {
+        try(read_partner_budget_from_excel(
+          file, n_work_packages = n_work_packages
+        ))
+      })
     )
-
-    parallel::stopCluster(cl)
 
   } else {
 
-    lapply(seq_along(files), function(i) {
-
-      file <- files[i]
+    lapply(files, function(file) {
 
       message(sprintf(
-        "Reading '%s' (%d/%d)...", basename(file), i, length(files)
+        "Reading '%s' (%d/%d)...", basename(file),
+        which(file == files),
+        length(files)
       ))
 
-      try(kwb.budget::read_partner_budget_from_excel(
+      try(read_partner_budget_from_excel(
         file, n_work_packages = n_work_packages
       ))
 
