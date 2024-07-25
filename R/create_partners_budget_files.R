@@ -1,6 +1,6 @@
 #' Create partners budget files (for DWH)
 #'
-#' @param path_partners path to partners budget metadata EXCEL file
+#' @param partner_info data frame as returned by \code{\link{read_partner_info}}
 #' @param path_budget_template path to budget template EXCEL file
 #' @param project_shortname proposal acronym (default: "DWH")
 #' @param target_dir target directory where to save the budget files (default:
@@ -8,13 +8,13 @@
 #' @param set_values should metadata from partners EXCEL file be set or just the
 #' template budget EXCEL file copied
 #' @param overwrite should existing EXCEL files be overwritten (default: TRUE)
-#' @return budget excel files for each project partner
+#' @return paths to created Excel files
 #' @export
 #' @importFrom fs dir_create file_copy
 #' @importFrom openxlsx loadWorkbook read.xlsx writeData saveWorkbook
 #'
 create_partners_budget_files <- function(
-    path_partners,
+    partner_info,
     path_budget_template,
     project_shortname = "DWH",
     target_dir = file.path(dirname(path_budget_template), "10_Filled_out_forms"),
@@ -22,22 +22,16 @@ create_partners_budget_files <- function(
     overwrite = TRUE
 )
 {
-  partner_infos <- openxlsx::read.xlsx(
-    xlsxFile = path_partners,
-    sheet = "Partners-PIC-Main contact"
-  )
-
+  message(sprintf("Creating target directory: %s", target_dir))
   fs::dir_create(target_dir)
 
   if (set_values) {
     wb <- openxlsx::loadWorkbook(path_budget_template)
   }
 
-  message(sprintf("Creating target directory: %s", target_dir))
+  sapply(seq_len(nrow(partner_info)), function(index) {
 
-  sapply(seq_len(nrow(partner_infos)), function(index) {
-
-    metadata <- partner_infos[index,]
+    metadata <- partner_info[index, ]
 
     budget_file_name <- sprintf(
       "%s_partner-budget_%02d_%s.xlsx",
@@ -53,7 +47,8 @@ create_partners_budget_files <- function(
       wb <- openxlsx::loadWorkbook(path_budget_template)
 
       message(
-        "Renaming template and add partner metadata (DANGER: cell protection is lost!): ",
+        "Renaming template and add partner metadata ",
+        "(DANGER: cell protection is lost!): ",
         target_file
       )
 
@@ -75,11 +70,9 @@ create_partners_budget_files <- function(
     } else {
 
       message(sprintf("Renaming budget-template to: %s", target_file))
-
       fs::file_copy(path_budget_template, target_file, overwrite = overwrite)
     }
 
+    target_file
   })
-
-  target_dir
 }

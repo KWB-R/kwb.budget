@@ -5,7 +5,7 @@
 \title{Create partners budget files (for DWH)}
 \usage{
 create_partners_budget_files(
-  path_partners,
+  partner_info,
   path_budget_template,
   project_shortname = "DWH",
   target_dir = file.path(dirname(path_budget_template), "10_Filled_out_forms"),
@@ -14,7 +14,7 @@ create_partners_budget_files(
 )
 }
 \arguments{
-\item{path_partners}{path to partners budget metadata EXCEL file}
+\item{partner_info}{data frame as returned by \code{\link{read_partner_info}}}
 
 \item{path_budget_template}{path to budget template EXCEL file}
 
@@ -29,7 +29,7 @@ template budget EXCEL file copied}
 \item{overwrite}{should existing EXCEL files be overwritten (default: TRUE)}
 }
 \value{
-budget excel files for each project partner
+paths to created Excel files
 }
 \description{
 Create partners budget files (for DWH)
