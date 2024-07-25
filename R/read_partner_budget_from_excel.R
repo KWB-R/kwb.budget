@@ -95,7 +95,7 @@ read_partner_budget_from_excel <- function(
   )))
 
   bind_partner <- function(x) {
-    cbind(kwb.utils::noFactorDataFrame(partner = budget$partner_id), x)
+    data.frame(partner = budget$partner_id, x, stringsAsFactors = FALSE)
   }
 
   result <- cbind(
