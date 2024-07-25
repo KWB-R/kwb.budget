@@ -2,6 +2,7 @@
 
 #' List the Partner's File Versions (Except Current)
 #'
+#' @param path path to folder containing Excel files on Nextcloud
 #' @export
 #' @importFrom kwb.nextcloud list_file_versions
 #' @export

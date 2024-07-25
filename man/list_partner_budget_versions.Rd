@@ -4,7 +4,12 @@
 \alias{list_partner_budget_versions}
 \title{List the Partner's File Versions (Except Current)}
 \usage{
-list_partner_budget_versions()
+list_partner_budget_versions(
+  path = "proposals/h2020_covid/60_Budget/10_Filled_out_forms"
+)
+}
+\arguments{
+\item{path}{path to folder containing Excel files on Nextcloud}
 }
 \description{
 List the Partner's File Versions (Except Current)
