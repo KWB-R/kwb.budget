@@ -6,7 +6,8 @@
 #' @export
 #' @importFrom kwb.utils noFactorDataFrame safeRowBind
 #'
-append_zero_costs <- function(x, n_work_packages) {
+append_zero_costs <- function(x, n_work_packages)
+{
   kwb.utils::safeRowBind(x, kwb.utils::noFactorDataFrame(
     partner = unique(x$partner), wp = seq_len(n_work_packages), cost = 0
   ))

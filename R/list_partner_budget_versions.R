@@ -6,10 +6,9 @@
 #' @importFrom kwb.nextcloud list_file_versions
 #' @export
 #'
-list_partner_budget_versions <- function()
+list_partner_budget_versions <- function(
+    path = "proposals/h2020_covid/60_Budget/10_Filled_out_forms"
+)
 {
-  kwb.nextcloud::list_file_versions(
-    path = "proposals/h2020_covid/60_Budget/10_Filled_out_forms",
-    pattern = "\\.xlsx$"
-  )
+  kwb.nextcloud::list_file_versions(path = path, pattern = "\\.xlsx$")
 }

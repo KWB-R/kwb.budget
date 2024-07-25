@@ -19,7 +19,7 @@ read_partners_budget_from_excel <- function(
 {
   if (run_parallel) {
 
-    ncores <- parallel::detectCores() - 1
+    ncores <- parallel::detectCores() - 1L
 
     cl <- parallel::makeCluster(ncores)
 
