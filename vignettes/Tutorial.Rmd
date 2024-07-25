@@ -46,6 +46,7 @@ nextcloud_files <- kwb.nextcloud::list_files(
 
 nextcloud_files$file
 ```
+
 ## Download files from Nextcloud
 
 ```{r}
@@ -53,6 +54,7 @@ local_files <- kwb.nextcloud::download_files(hrefs = nextcloud_files$href)
 
 local_files
 ```
+
 ## Read (local) budget file 
 
 ```{r}
@@ -74,6 +76,24 @@ get_details("personnel")
 get_details(name = "consumables")
 get_details("equipment")
 get_details("subcontracting")
+```
+
+## Read a set of (local) budget files
+
+```{r}
+budgets <- kwb.budget::read_partners_budget_from_excel(
+  files = local_files
+)
+```
+
+If errors occur, switch off parallel processing and hope for clear error 
+messages:
+
+```{r}
+budgets <- kwb.budget::read_partners_budget_from_excel(
+  files = local_files, 
+  run_parallel = FALSE
+)
 ```
 
 <!-- 
