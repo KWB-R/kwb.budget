@@ -17,17 +17,15 @@ read_partners_budget_from_excel <- function(
     run_parallel = TRUE
 )
 {
-  if (run_parallel) {
+  budgets <- if (run_parallel) {
 
     ncores <- parallel::detectCores() - 1L
 
     cl <- parallel::makeCluster(ncores)
     on.exit(parallel::stopCluster(cl))
 
-    msg <- sprintf("Importing %d budget files from partners", length(files))
-
     kwb.utils::catAndRun(
-      messageText = msg,
+      sprintf("Importing %d budget files from partners", length(files)),
       expr = parallel::parLapply(cl, files, function(file) {
         try(read_partner_budget_from_excel(
           file, n_work_packages = n_work_packages
@@ -51,4 +49,6 @@ read_partners_budget_from_excel <- function(
 
     })
   }
+
+  stats::setNames(budgets, basename(files))
 }
