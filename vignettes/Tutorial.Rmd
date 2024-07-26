@@ -97,14 +97,6 @@ budgets <- kwb.budget::read_partners_budget_from_excel(
 )
 ```
 
-<!-- 
+## TODO
 
-**To do:** 
-
-- Add example from **R/.read_budget_files.R** after moving functions in 
-own file under **R/..**
-
-- Maybe also add environment variables NEXTCLOUD_URL/USER/PASSWORD to travis-ci.org 
-in order to do have an working example (but with anomynised data !!!)
-
--->
+- Add more code from `inst/extdata/scripts/read_budget-files.R`
