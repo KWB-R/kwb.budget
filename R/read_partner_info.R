@@ -22,6 +22,7 @@ read_partner_info <- function(
   }
 
   local_path %>%
+    kwb.utils::safePath() %>%
     openxlsx::read.xlsx(sheet = sheet) %>%
     kwb.utils::selectColumns(columns) %>%
     structure(local_path = local_path)
