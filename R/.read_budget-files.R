@@ -310,11 +310,39 @@ if (FALSE)
   print(budget)
 }
 
-
 # path_defined -----------------------------------------------------------------
 path_defined <- function(name)
 {
   name %in% names(PATHS)
+}
+
+# read_costs_from_input_files --------------------------------------------------
+read_costs_from_input_files <- function(budget_files, n_work_packages = 6L)
+{
+  # kwb.budget::read_partner_budget_from_excel(
+  #   file = budget_files[1L],
+  #   n_work_packages = 7L
+  # )
+
+  costs_list <- kwb.budget::read_partners_budget_from_excel(
+    budget_files,
+    n_work_packages = n_work_packages,
+    run_parallel = FALSE # false = slower but with more debug messages
+  )
+
+  # There are warnings: "No data found on worksheet.", why?
+
+  # Check for errors
+  has_error <- sapply(costs_list, kwb.utils::isTryError)
+
+  if (any(has_error)) {
+    kwb.utils::printIf(TRUE, has_error)
+    print(table(has_error))
+    message("Removing ", sum(has_error), " elements with errors")
+  }
+
+  # Exclude elements that caused errors
+  costs_list[! has_error]
 }
 
 # write_costs_to_excel ---------------------------------------------------------
@@ -341,66 +369,6 @@ upload_files <- function(files, target_path)
   for (file in files) {
     kwb.nextcloud::upload_file(file, target_path)
   }
-}
-
-# get_all_cost_sheets ----------------------------------------------------------
-get_all_cost_sheets <- function(costs_list, partner_info, n_work_packages)
-{
-  overview <- kwb.utils::rbindAll(costs_list)
-
-  # Use fake data on partners if partner_info is missing or has errors
-  if (is.null(partner_info) || kwb.utils::isTryError(partner_info)) {
-    partner_info <- fake_partner_info(n_partners = nrow(overview))
-  }
-
-  costs <- list()
-
-  # Generate overview with one row per partner
-  costs$overview <- dplyr::left_join(overview, partner_info, by = "partner_id")
-
-  # Generate detail view with one row per partner and work package
-  # (direct costs by WP)
-  costs$by_wp_and_partner <- list_to_costs_by_wp_and_partner(
-    costs_list = costs_list,
-    costs_overview = costs$overview,
-    n_work_packages = n_work_packages
-  )
-
-  costs$by_wp <- list_to_costs_by_wp(costs$by_wp_and_partner)
-
-  # Merge with simplified table withz costs
-  costs$overview_and_pm_per_wp <- get_person_month_costs(
-    costs_overview = costs$overview,
-    costs_by_wp = costs$by_wp_and_partner
-  )
-
-  # Prepare table with costs by company type
-  costs$by_type <- kwb.budget::get_costs_by_type(costs$overview)
-
-  # Prepare table with costs by sector type
-  costs$by_sector <- kwb.budget::get_costs_by_sector(costs$overview)
-
-  # Prepare table with costs by country
-  costs$by_country <- get_costs_by_country(costs_overview = costs$overview)
-
-  kwb.utils::selectElements(costs, c(
-    "overview", "overview_and_pm_per_wp", "by_wp_and_partner", "by_wp",
-    "by_type", "by_sector", "by_country"
-  ))
-}
-
-# fake_partner_info ------------------------------------------------------------
-fake_partner_info <- function(n_partners = 10L)
-{
-  indices <- seq_len(n_partners)
-
-  data.frame(
-    partner_id = indices,
-    country = "de",
-    partner_name_short = LETTERS[indices],
-    partner_sector = "water",
-    partner_type = "research institute"
-  )
 }
 
 # check_if_updated -------------------------------------------------------------
@@ -449,186 +417,18 @@ check_if_updated <- function(file_info_latest, file_info_old)
   is_updated
 }
 
-# list_to_costs_by_wp_and_partner-----------------------------------------------
-list_to_costs_by_wp_and_partner <- function(
-    costs_list, costs_overview, n_work_packages
-)
-{
-  costs_overview <- kwb.utils::selectColumns(costs_overview, c(
-    "partner_id", "partner_name_short", "partner_type", "partner_sector",
-    "country", "Reimbursement_rate"
-  ))
-
-  kwb.budget::get_costs_by_work_package(costs_list, n_work_packages) %>%
-    merge(costs_overview, by.x = "partner", by.y = "partner_id") %>%
-    # Add indirect and total costs
-    dplyr::rename(partner_id = partner, partner = partner_name_short) %>%
-    dplyr::mutate(
-      Direct_cost = .data$cost.personnel +
-        .data$cost.equipment +
-        .data$cost.consumables +
-        .data$cost.subcontracting,
-      Indirect_cost = 0.25 * (
-        .data$Direct_cost - .data$cost.subcontracting
-      ),
-      Total_cost = .data$Direct_cost + .data$Indirect_cost,
-      Total_funded_cost = .data$Reimbursement_rate * .data$Total_cost
-    ) %>%
-    kwb.utils::moveColumnsToFront(c(
-      "partner_id", "partner", "partner_type", "country"
-    )) %>%
-    move_columns_right(c("Reimbursement_rate", "Total_funded_cost"))
-}
-
-# move_columns_right -----------------------------------------------------------
-move_columns_right <- function(data, columns)
-{
-  kwb.utils::selectColumns(data, c(setdiff(names(data), columns), columns))
-}
-
-# list_to_costs_by_wp-----------------------------------------------------------
-list_to_costs_by_wp <- function(costs_by_wp_and_partner)
-{
-  costs_by_wp_and_partner %>%
-    dplyr::group_by(.data$wp) %>%
-    dplyr::summarise(
-      Total_cost = sum(.data$Total_cost),
-      Total_funded_cost = sum(.data$Total_funded_cost)
-    ) %>%
-    dplyr::mutate(
-      Total_funded_cost_p = round(
-        100 * .data$Total_funded_cost / sum(.data$Total_funded_cost),
-        digits = 2
-      )
-    ) %>%
-    as.data.frame()
-}
-
-# get_person_months_by_wp ------------------------------------------------------
-get_person_months_by_wp <- function(costs_by_wp)
-{
-  costs_by_wp %>%
-    kwb.utils::selectColumns(c("partner", "wp", "person_months.personnel")) %>%
-    tidyr::spread(.data$wp, .data$person_months.personnel)
-}
-
-# get_person_month_costs -------------------------------------------------------
-get_person_month_costs <- function(costs_overview, costs_by_wp)
-{
-  # Prepare simplified table with costs
-  costs_short <- prepare_cost_data_short(costs_overview)
-
-  # Prepare table with person month for each wp
-  pm_data_by_wp <- get_person_months_by_wp(costs_by_wp)
-
-  merge(
-    costs_short, pm_data_by_wp,
-    by.x = "partner_name_short",
-    by.y = "partner",
-    all = TRUE
-  ) %>%
-    move_columns_right("Total_funded_cost")
-}
-
-# get_costs_by_country ---------------------------------------------------------
-get_costs_by_country <- function(costs_overview)
-{
-  costs_by_country <- costs_overview %>%
-    dplyr::group_by(country) %>%
-    dplyr::summarise(
-      Total_cost = sum(Total_cost),
-      Total_funded_cost = sum(Total_funded_cost),
-      n = dplyr::n()
-    ) %>%
-    dplyr::mutate(
-      Total_funded_cost_p = round(
-        100 * .data$Total_funded_cost / sum(.data$Total_funded_cost),
-        digits = 2
-      )) %>%
-    dplyr::arrange(dplyr::desc(.data$Total_funded_cost)) %>%
-    kwb.utils::selectColumns(c(
-      "country", "n", "Total_cost", "Total_funded_cost", "Total_funded_cost_p"
-    )) %>%
-    as.data.frame()
-
-  # show funded costs by type
-  rbind(costs_by_country, c(
-    "Total",
-    sum(costs_by_country$n),
-    sum(costs_by_country$Total_cost),
-    sum(costs_by_country$Total_funded_cost),
-    sum(costs_by_country$Total_funded_cost_p)
-  )) %>%
-    dplyr::mutate(
-      n = as.numeric(.data$n),
-      Total_cost = as.numeric(.data$Total_cost),
-      Total_funded_cost = as.numeric(.data$Total_funded_cost),
-      Total_funded_cost_p = as.numeric(.data$Total_funded_cost_p)
-    )
-}
-
-# read_costs_from_input_files --------------------------------------------------
-read_costs_from_input_files <- function(budget_files, n_work_packages = 6L)
-{
-  # kwb.budget::read_partner_budget_from_excel(
-  #   file = budget_files[1L],
-  #   n_work_packages = 7L
-  # )
-
-  costs_list <- kwb.budget::read_partners_budget_from_excel(
-    budget_files,
-    n_work_packages = n_work_packages,
-    run_parallel = FALSE # false = slower but with more debug messages
-  )
-
-  # There are warnings: "No data found on worksheet.", why?
-
-  # Check for errors
-  has_error <- sapply(costs_list, kwb.utils::isTryError)
-
-  if (any(has_error)) {
-    kwb.utils::printIf(TRUE, has_error)
-    print(table(has_error))
-    message("Removing ", sum(has_error), " elements with errors")
-  }
-
-  # Exclude elements that caused errors
-  costs_list[! has_error]
-}
-
 # to_cost_matrices -------------------------------------------------------------
 to_cost_matrices <- function(costs_by_wp)
 {
-  to_cost_matrix <- function(x, column) {
-    input <- kwb.utils::selectColumns(x, c(names(x)[1:2], column))
-    kwb.utils::countOrSum(
-      input, by = names(input)[1:2], sum.up = names(input)[3]
-    )
-  }
+  all_columns <- names(costs_by_wp)
+  first_two <- all_columns[1:2]
 
-  cost_columns <- kwb.utils::toNamedList(names(costs_by_wp)[-(1:2)])
-
-  lapply(cost_columns, to_cost_matrix, x = costs_by_wp)
+  lapply(
+    X = stats::setNames(nm = setdiff(all_columns, first_two)),
+    FUN = function(column) {
+      costs_by_wp %>%
+        kwb.utils::selectColumns(c(first_two, column)) %>%
+        kwb.utils::countOrSum(by = first_two, sum.up = column)
+    }
+  )
 }
-
-# prepare_cost_data_short ------------------------------------------------------
-prepare_cost_data_short <- function(costs_overview)
-{
-  # reduce table size
-  costs_overview %>%
-    dplyr::select(-c(
-      pic_number,
-      partner_name,
-      author_name,
-      author_email,
-      contact_name,
-      contact_email,
-      Participant
-    )) %>%
-    dplyr::select(-Reimbursement_rate, Reimbursement_rate) %>%
-    dplyr::select(-Total_funded_cost, Total_funded_cost) %>%
-    kwb.utils::moveColumnsToFront(c(
-      "filename", "partner_id", "partner_name_short", "partner_type", "country"
-    ))
-}
-
