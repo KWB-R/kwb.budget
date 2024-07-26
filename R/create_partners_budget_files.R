@@ -2,7 +2,7 @@
 #'
 #' @param partner_info data frame as returned by \code{\link{read_partner_info}}
 #' @param path_budget_template path to budget template EXCEL file
-#' @param project_shortname proposal acronym (default: "DWH")
+#' @param prefix prefix given to all created files (default: "")
 #' @param target_dir target directory where to save the budget files (default:
 #' file.path(dirname(path_budget_template), "10_Filled_out_forms"))
 #' @param set_values should metadata from partners EXCEL file be set or just the
@@ -16,30 +16,32 @@
 create_partners_budget_files <- function(
     partner_info,
     path_budget_template,
-    project_shortname = "DWH",
+    prefix = "",
     target_dir = file.path(dirname(path_budget_template), "10_Filled_out_forms"),
     set_values = FALSE,
     overwrite = TRUE
 )
 {
-  message(sprintf("Creating target directory: %s", target_dir))
-  fs::dir_create(target_dir)
-
   if (set_values) {
-    wb <- openxlsx::loadWorkbook(path_budget_template)
+    suppressWarnings(
+      wb <- path_budget_template %>%
+        kwb.utils::safePath() %>%
+        openxlsx::loadWorkbook()
+    )
   }
 
   sapply(seq_len(nrow(partner_info)), function(index) {
 
-    metadata <- partner_info[index, ]
+    metadata <- kwb.utils::createAccessor(partner_info[index, ])
 
     budget_file_name <- sprintf(
-      "%s_partner-budget_%02d_%s.xlsx",
-      project_shortname,
-      metadata$partner_id,
-      metadata$partner_name_short
+      "%spartner-budget_%02d_%s.xlsx",
+      prefix,
+      metadata("partner_id"),
+      metadata("partner_name_short")
     )
 
+    kwb.utils::createDirectory(target_dir)
     target_file <- file.path(target_dir, budget_file_name)
 
     if (set_values) {
@@ -56,10 +58,10 @@ create_partners_budget_files <- function(
         wb = wb,
         sheet = "Summary",
         x = c(
-          metadata$pic,
-          metadata$partner_name_legal,
-          metadata$partner_name_short,
-          metadata$funding_rate
+          metadata("pic"),
+          metadata("partner_name_legal"),
+          metadata("partner_name_short"),
+          metadata("funding_rate")
         ),
         startCol = "C",
         startRow = 5
