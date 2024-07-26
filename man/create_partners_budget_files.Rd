@@ -7,7 +7,7 @@
 create_partners_budget_files(
   partner_info,
   path_budget_template,
-  project_shortname = "DWH",
+  prefix = "",
   target_dir = file.path(dirname(path_budget_template), "10_Filled_out_forms"),
   set_values = FALSE,
   overwrite = TRUE
@@ -18,7 +18,7 @@ create_partners_budget_files(
 
 \item{path_budget_template}{path to budget template EXCEL file}
 
-\item{project_shortname}{proposal acronym (default: "DWH")}
+\item{prefix}{prefix given to all created files (default: "")}
 
 \item{target_dir}{target directory where to save the budget files (default:
 file.path(dirname(path_budget_template), "10_Filled_out_forms"))}

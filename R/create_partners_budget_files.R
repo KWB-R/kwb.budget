@@ -23,11 +23,14 @@ create_partners_budget_files <- function(
 )
 {
   if (set_values) {
-    suppressWarnings(
-      wb <- path_budget_template %>%
-        kwb.utils::safePath() %>%
-        openxlsx::loadWorkbook()
-    )
+    wb <- path_budget_template %>%
+      kwb.utils::safePath() %>%
+      openxlsx::loadWorkbook()
+  }
+
+  if (!dir.exists(target_dir)) {
+    message("Creating ", target_dir)
+    dir.create(target_dir, recursive = TRUE)
   }
 
   sapply(seq_len(nrow(partner_info)), function(index) {
@@ -41,7 +44,6 @@ create_partners_budget_files <- function(
       metadata("partner_name_short")
     )
 
-    kwb.utils::createDirectory(target_dir)
     target_file <- file.path(target_dir, budget_file_name)
 
     if (set_values) {
