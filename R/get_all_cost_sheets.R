@@ -40,10 +40,17 @@ fake_partner_info <- function(n_partners = 10L)
 
   data.frame(
     partner_id = indices,
+    pic = 1e6 + indices,
     country = "de",
     partner_name_short = LETTERS[indices],
+    partner_name_legal = "",
     partner_sector = "water",
-    partner_type = "research institute"
+    partner_type = "research institute",
+    funding_rate = 1,
+    contact_admin_name = "",
+    contact_admin_email = "",
+    comments = "",
+    partner_description = ""
   )
 }
 
