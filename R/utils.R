@@ -4,6 +4,29 @@ move_columns_right <- function(data, columns)
   kwb.utils::selectColumns(data, c(setdiff(names(data), columns), columns))
 }
 
+
+# read_or_write_csv ------------------------------------------------------------
+
+#' Read CSV File or Write CSV File if File does not exist
+#'
+#' @param file path to CSV file
+#' @param data optional data to be written to CSV file in case that file does
+#'   not exist
+#' @importFrom kwb.utils createDirectory
+#' @importFrom readr read_csv write_csv
+#' @export
+read_or_write_csv <- function(file, data = NULL)
+{
+  if (file.exists(file)) {
+    readr::read_csv(file)
+  } else {
+    stopifnot(!is.null(data))
+    kwb.utils::createDirectory(dirname(file), dbg = FALSE)
+    readr::write_csv(data, file)
+    data
+  }
+}
+
 # remove_error_elements --------------------------------------------------------
 remove_error_elements <- function(x)
 {
