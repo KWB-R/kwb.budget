@@ -1,38 +1,40 @@
 # files_have_changed -----------------------------------------------------------
 files_have_changed <- function(file_info_new, file_info_old)
 {
+  if (identical(file_info_new, file_info_old)) {
+    return(FALSE)
+  }
+
   columns <- c("fileid", "file", "lastmodified")
 
-  file_comparsion <- dplyr::full_join(
+  file_info <- dplyr::full_join(
     file_info_new[columns],
     file_info_old[columns],
-    by = "fileid"
-  ) %>%
-    dplyr::mutate(
-      msg = dplyr::if_else(
-        is.na(.data$file.x) & ! is.na(.data$file.y),
-        sprintf("DELETED: %s", .data$file.y),
-        dplyr::if_else(
-          ! is.na(.data$file.x) & is.na(.data$file.y),
-          sprintf("ADDED: %s", .data$file.x),
-          dplyr::if_else(
-            .data$file.x == .data$file.y,
-            "",
-            sprintf("UPDATED: %s", .data$file.x)
-          )
-        )
-      )
-    )
+    by = "fileid",
+    suffix = c(".new", ".old")
+  )
 
-  file_updated <-
-    file_comparsion$lastmodified.x != file_comparsion$lastmodified.y |
-    is.na(file_comparsion$lastmodified.x) |
-    is.na(file_comparsion$lastmodified.y)
+  old_given <- !is.na(file_info$file.old)
+  new_given <- !is.na(file_info$file.new)
 
-  if (any(file_updated)) {
+  mod_x <- file_info$lastmodified.x
+  mod_y <- file_info$lastmodified.y
+
+  deleted <- !new_given & old_given
+  added <- new_given & !old_given
+  updated <- new_given & old_given & mod_x != mod_y
+
+  status_text <- character(nrow(file_info))
+  status_text[deleted] <- paste("DELETED:", file_info$file.old[deleted])
+  status_text[added] <- paste("ADDED:", file_info$file.new[added])
+  status_text[updated] <- paste("UPDATED:", file_info$file.old[updated])
+
+  has_changed <- nzchar(status_text)
+
+  if (any(has_changed)) {
     message(
-      "The following files were updated:\n\n",
-      paste(file_comparsion$msg[which(file_updated)], collapse = "\n")
+      "The following files were updated:\n",
+      paste(status_text[has_changed], collapse = "\n")
     )
     return(TRUE)
   }
