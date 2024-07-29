@@ -2,15 +2,18 @@
 title: "Tutorial: H2020 proposal (with Nextcloud)"
 output: rmarkdown::html_vignette
 vignette: >
+  %\VignetteEncoding{UTF-8}
   %\VignetteIndexEntry{Tutorial: H2020 proposal (with Nextcloud)}
   %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  eval = FALSE
 )
 ```
 
@@ -18,10 +21,124 @@ knitr::opts_chunk$set(
 library(kwb.budget)
 ```
 
+## Set environment variables for Nextcloud access
 
-**To do:** 
-- Add example from **R/.read_budget_files.R** after moving functions in 
-own file under **R/..**
+Provide the URL to your Nextcloud instance in environment variable 
+`NEXTCLOUD_URL`.
 
-- Maybe also add environment variables NEXTCLOUD_URL/USER/PASSWORD to travis-ci.org 
-in order to do have an working example (but with anomynised data !!!)
+On Nextcloud, create a password for an application to login:
+
+- Go to `<NEXTCLOUD_URL>/index.php/settings/user/security`
+- In section "Devices and sessions"
+- Enter a name (e.g. "rstudio") in the text field "App name",
+- press the button "Create new app password" and
+- note the user name and the generated password.
+
+Provide user name and password as retrieved above to environment variables 
+`NEXTCLOUD_USER` and `NEXTCLOUD_PASSWORD`, respectively.
+
+## Example Workflow
+
+```{r}
+# Define paths
+CLOUD_PATH_FORMS <- "proposals_external/2024_EU_Twin_Transition/20_stage_2/60_budget/filled_out_forms"
+CLOUD_PATH_PARTNERS <- "proposals_external/2024_EU_Twin_Transition/20_stage_2/20_partners/project-partners_test.xlsx"
+CLOUD_PATH_SUMMARY_FILES <- "proposals_external/2024_EU_Twin_Transition/20_stage_2/60_budget/summary_files"
+LOCAL_PATH_SUMMARY <- "~/Projekte/2024_EU_Twin_Transition/stage_2/60_budget/summary_files/partner-budget.xlsx"
+
+# Download budget files from Nextcloud
+budget_files <- kwb.budget::download_matching_files(
+  path = CLOUD_PATH_FORMS, 
+  pattern = "budget_.*\\.xlsx$"
+)
+
+# Number of work packages
+n_work_packages <- 7L
+
+# Read raw data
+costs_list <- kwb.budget::read_partners_budget_from_excel(
+  files = budget_files,
+  n_work_packages = n_work_packages
+)
+
+# Get metadata about the project partners
+partner_info <- kwb.budget::read_partner_info(
+  nextcloud_path = CLOUD_PATH_PARTNERS,
+  sheet = "Partners-PIC-Main contact"
+)
+
+# Create cost summaries
+cost_summaries <- kwb.budget:::get_all_cost_sheets(
+  kwb.budget:::remove_error_elements(costs_list),
+  partner_info = partner_info,
+  n_work_packages = n_work_packages
+)
+
+# Write costs to an Excel file
+xls_file <- kwb.budget:::write_to_excel(cost_summaries, LOCAL_PATH_SUMMARY)
+
+# Open Excel File
+#kwb.utils::hsOpenWindowsExplorer(path.expand(xls_file))
+
+# Upload updated files to Nextcloud
+kwb.budget::upload_files(xls_file, CLOUD_PATH_SUMMARY_FILES)
+```
+
+## List files on Nextcloud
+
+```{r}
+nextcloud_files <- kwb.nextcloud::list_files(
+  path = "proposals_external/2024_EU_Twin_Transition/20_stage_2/60_budget", 
+  full_info = TRUE
+)
+
+nextcloud_files$file
+```
+
+## Download files from Nextcloud
+
+```{r}
+local_files <- kwb.nextcloud::download_files(hrefs = nextcloud_files$href)
+local_files
+```
+
+## Read (local) budget file 
+
+```{r}
+budget <- kwb.budget::read_partner_budget_from_excel(file = local_files[1L])
+str(budget, give.attr = FALSE)
+```
+
+The details are returned as attributes:
+
+```{r}
+get_details <- function(name) {
+  details <- kwb.utils::getAttribute(budget, name)
+  is_complete <- !is.na(details$wp)
+  details[is_complete, ]
+}
+get_details("personnel")
+get_details(name = "consumables")
+get_details("equipment")
+get_details("subcontracting")
+```
+
+## Read a set of (local) budget files
+
+```{r}
+budgets <- kwb.budget::read_partners_budget_from_excel(files = local_files)
+```
+
+If errors occur, switch off parallel processing and hope for clear error 
+messages:
+
+```{r}
+budgets <- kwb.budget::read_partners_budget_from_excel(
+  files = local_files, 
+  run_parallel = FALSE
+)
+```
+
+## TODO
+
+- Add more code from `inst/extdata/scripts/read_budget-files.R`

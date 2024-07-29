@@ -25,13 +25,15 @@ BugReports: https://github.com/KWB-R/kwb.budget/issues
 Imports:
     dplyr,
     fs,
-    kwb.nextcloud (>= 0.1.0),
-    kwb.utils (>= 0.6.0),
+    kwb.nextcloud,
+    kwb.utils,
     magrittr,
     parallel,
     openxlsx (>= 4.1.4),
+    readr,
     rlang, 
-    stringr
+    stringr,
+    tidyr
 Suggests: 
     covr,
     knitr,
@@ -40,8 +42,8 @@ VignetteBuilder:
     knitr
 Remotes:
     github::kwb-r/kwb.nextcloud@dev,
-    github::kwb-r/kwb.utils@v0.6.0
+    github::kwb-r/kwb.utils
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.0
+RoxygenNote: 7.3.1

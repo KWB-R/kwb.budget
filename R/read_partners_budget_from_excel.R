@@ -4,7 +4,7 @@
 #' @param n_work_packages number of work packages in EXCEL template
 #' (default: 7, as used for DWC)
 #' @param run_parallel should import be performed using multiple CPU cores or
-#' only run on a single core (default: TRUE)
+#' only run on a single core (default: FALSE)
 #' @return list with imported EXCEL budget files data
 #' @export
 #' @importFrom kwb.utils noFactorDataFrame renameAndSelect removeColumns
@@ -12,48 +12,43 @@
 #' @importFrom parallel detectCores makeCluster parLapply stopCluster
 #'
 read_partners_budget_from_excel <- function(
-  files,
-  n_work_packages = 7,
-  run_parallel = TRUE
+    files,
+    n_work_packages = 7,
+    run_parallel = FALSE
 )
 {
-  if (run_parallel) {
+  budgets <- if (run_parallel) {
 
-    ncores <- parallel::detectCores() - 1
+    ncores <- parallel::detectCores() - 1L
 
     cl <- parallel::makeCluster(ncores)
-
-    msg <- sprintf("Importing %d budget files from partners", length(files))
+    on.exit(parallel::stopCluster(cl))
 
     kwb.utils::catAndRun(
-      messageText = msg,
-      expr = parallel::parLapply(
-        cl, files, function(file) {
-          try(
-            kwb.budget::read_partner_budget_from_excel(
-              file, n_work_packages = n_work_packages
-            )
-          )
-        }
-      )
+      sprintf("Importing %d budget files from partners", length(files)),
+      expr = parallel::parLapply(cl, files, function(file) {
+        try(read_partner_budget_from_excel(
+          file, n_work_packages = n_work_packages
+        ))
+      })
     )
-
-    parallel::stopCluster(cl)
 
   } else {
 
-    lapply(seq_along(files), function(i) {
-
-      file <- files[i]
+    lapply(files, function(file) {
 
       message(sprintf(
-        "Reading '%s' (%d/%d)...", basename(file), i, length(files)
+        "Reading '%s' (%d/%d)...", basename(file),
+        which(file == files),
+        length(files)
       ))
 
-      try(kwb.budget::read_partner_budget_from_excel(
+      try(read_partner_budget_from_excel(
         file, n_work_packages = n_work_packages
       ))
 
     })
   }
+
+  stats::setNames(budgets, basename(files))
 }

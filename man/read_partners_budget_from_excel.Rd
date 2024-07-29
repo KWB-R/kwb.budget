@@ -7,7 +7,7 @@
 read_partners_budget_from_excel(
   files,
   n_work_packages = 7,
-  run_parallel = TRUE
+  run_parallel = FALSE
 )
 }
 \arguments{
@@ -17,7 +17,7 @@ read_partners_budget_from_excel(
 (default: 7, as used for DWC)}
 
 \item{run_parallel}{should import be performed using multiple CPU cores or
-only run on a single core (default: TRUE)}
+only run on a single core (default: FALSE)}
 }
 \value{
 list with imported EXCEL budget files data

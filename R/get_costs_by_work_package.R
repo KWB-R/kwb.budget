@@ -6,7 +6,8 @@
 #' @export
 #' @importFrom kwb.utils noFactorDataFrame safeRowBind
 #'
-append_zero_costs <- function(x, n_work_packages) {
+append_zero_costs <- function(x, n_work_packages)
+{
   kwb.utils::safeRowBind(x, kwb.utils::noFactorDataFrame(
     partner = unique(x$partner), wp = seq_len(n_work_packages), cost = 0
   ))
@@ -49,16 +50,22 @@ get_costs_by_work_package <- function(costs_list, n_work_packages = 7)
   sum_by_work_package <- function(x) {
     x %>%
       dplyr::group_by(.data$partner, .data$wp) %>%
-      dplyr::summarise(cost = sum(.data$cost))
+      dplyr::summarise(
+        cost = sum(.data$cost),
+        .groups = "drop"
+      )
   }
 
   sum_pm_by_work_package <- function(x) {
     x %>%
       dplyr::group_by(.data$partner, .data$wp) %>%
-      dplyr::summarise(person_months = sum(.data$person_months, na.rm = TRUE))
+      dplyr::summarise(
+        person_months = sum(.data$person_months, na.rm = TRUE),
+        .groups = "drop"
+      )
   }
 
-  kwb.utils::mergeAll(by = c("partner", "wp"), list(
+  kwb.utils::mergeAll(by = c("partner", "wp"), dbg = FALSE, list(
     personnel = sum_pm_by_work_package(personnel),
     personnel = sum_by_work_package(personnel),
     equipment = sum_by_work_package(equipment),
