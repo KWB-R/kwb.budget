@@ -4,7 +4,7 @@
 #' @param n_work_packages number of work packages in EXCEL template
 #' (default: 7, as used for DWC)
 #' @param run_parallel should import be performed using multiple CPU cores or
-#' only run on a single core (default: TRUE)
+#' only run on a single core (default: FALSE)
 #' @return list with imported EXCEL budget files data
 #' @export
 #' @importFrom kwb.utils noFactorDataFrame renameAndSelect removeColumns
@@ -14,7 +14,7 @@
 read_partners_budget_from_excel <- function(
     files,
     n_work_packages = 7,
-    run_parallel = TRUE
+    run_parallel = FALSE
 )
 {
   budgets <- if (run_parallel) {
