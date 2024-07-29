@@ -8,7 +8,7 @@ create_partners_budget_files(
   partner_info,
   path_budget_template,
   prefix = "",
-  target_dir = file.path(dirname(path_budget_template), "10_Filled_out_forms"),
+  target_dir = tempdir(),
   set_values = FALSE,
   overwrite = TRUE
 )

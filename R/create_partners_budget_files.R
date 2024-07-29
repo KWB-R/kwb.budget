@@ -17,7 +17,7 @@ create_partners_budget_files <- function(
     partner_info,
     path_budget_template,
     prefix = "",
-    target_dir = file.path(dirname(path_budget_template), "10_Filled_out_forms"),
+    target_dir = tempdir(),
     set_values = FALSE,
     overwrite = TRUE
 )
@@ -51,8 +51,8 @@ create_partners_budget_files <- function(
       wb <- openxlsx::loadWorkbook(path_budget_template)
 
       message(
-        "Renaming template and add partner metadata ",
-        "(DANGER: cell protection is lost!): ",
+        "Copying template and entering partner metadata ",
+        "(DANGER: cell protection is lost!):\n  ",
         target_file
       )
 
