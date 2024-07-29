@@ -30,6 +30,7 @@ Imports:
     magrittr,
     parallel,
     openxlsx (>= 4.1.4),
+    readr,
     rlang, 
     stringr,
     tidyr

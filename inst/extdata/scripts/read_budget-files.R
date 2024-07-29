@@ -1,7 +1,6 @@
 library(kwb.budget)
 
 # Define paths and other global constants --------------------------------------
-project <- match.arg("ailiner", c("dwc", "dwh", "ailiner"))
 
 GRAMMAR <- list(
   BUDGET = "<PROJECT>/60_budget",
@@ -41,11 +40,11 @@ PARTNER_INFO_COLUMNS <- c(
 )
 
 N_WORK_PACKAGES <- 7L
+FILES_CHANGED <- FALSE
 
 # List files on Nextcloud ------------------------------------------------------
 if (FALSE)
 {
-  kwb.nextcloud::list_files(PATHS_CLOUD$BUDGET, full_info = FALSE)
   kwb.nextcloud::list_files(PATHS_CLOUD$BUDGET_FORMS, full_info = FALSE)
 }
 
@@ -113,7 +112,7 @@ if (FALSE)
   # - Send email to partners with instructions (save under same name, ...)
 }
 
-# Download And Analyse Budget Files from Nextcloud -----------------------------
+# Download Budget Files from Nextcloud and Analyse -----------------------------
 if (FALSE)
 {
   # List budget files that are available on Nextcloud
@@ -122,73 +121,61 @@ if (FALSE)
     full_info = TRUE
   )
 
-  local_file_info <- PATHS_LOCAL$FILE_INFO
+  # Read file list from local CSV file (or create one with the new file info)
+  file_info_old <- kwb.budget::read_or_write_csv(
+    file = PATHS_LOCAL$FILE_INFO,
+    data = file_info_new
+  )
 
-  file_info_old <- if (file.exists(local_file_info)) {
-    readr::read_csv(local_file_info)
-  } else {
-    kwb.utils::createDirectory(dirname(local_file_info), dbg = FALSE)
-    readr::write_csv(file_info_new, file = local_file_info)
-    file_info_new
+  files_changed <- kwb.budget:::files_have_changed(file_info_new, file_info_old)
+
+  if (!files_changed) {
+    stop("Nothing to do (budget files on the cloud have not changed).")
   }
 
-  if (!files_have_changed(file_info_new, file_info_old)) {
+  # Get metadata about the project partners
+  partner_info <- try(kwb.budget::read_partner_info(
+    nextcloud_path = PATHS_CLOUD$PARTNERS,
+    sheet = PARTNER_INFO_SHEET_NAME
+  ))
 
-    message(
-      "Going to sleep, because I have nothing to do! (budget files on ",
-      "the cloud have not changed since last execution!)"
-    )
+  # Get information on costs from input files and create all different cost
+  # views as a list of data frames
 
-  } else {
+  # Download budget files from Nextcloud
+  local_budget_files <- kwb.nextcloud::download_files(file_info_new$href)
 
-    # Get metadata about the project partners
-    partner_info <- try(kwb.budget::read_partner_info(
-      nextcloud_path = PATHS_CLOUD$PARTNERS,
-      sheet = PARTNER_INFO_SHEET_NAME,
-      columns = NULL # PARTNER_INFO_COLUMNS
-    ))
+  # There are warnings: "No data found on worksheet.", why?
 
-    # Get information on costs from input files and create all different cost
-    # views as a list of data frames
+  # Create and upload summary
+  costs <- kwb.budget:::get_all_cost_sheets(
+    costs_list = kwb.budget:::remove_error_elements(
+      kwb.budget::read_partners_budget_from_excel(
+        files = grep("\\.xlsx$", local_budget_files, value = TRUE),
+        n_work_packages = N_WORK_PACKAGES,
+        run_parallel = FALSE
+      )
+    ),
+    partner_info = partner_info,
+    n_work_packages = N_WORK_PACKAGES
+  )
 
-    # Download budget files from Nextcloud
-    local_budget_files <- kwb.nextcloud::download_files(file_info_new$href)
+  # Write costs to an Excel file
+  xls_file <- kwb.budget:::write_to_excel(costs, file.path(
+    PATHS_LOCAL$BUDGET_SUMMARY, "partner-budget.xlsx"
+  ))
 
-    # There are warnings: "No data found on worksheet.", why?
+  # Open Excel File
+  #kwb.utils::hsOpenWindowsExplorer(path.expand(xls_file))
 
-    # Create and upload summary
-    costs <- kwb.budget:::get_all_cost_sheets(
-      costs_list = kwb.budget:::remove_error_elements(
-        kwb.budget::read_partners_budget_from_excel(
-          files = grep("\\.xlsx$", local_budget_files, value = TRUE),
-          n_work_packages = N_WORK_PACKAGES,
-          run_parallel = FALSE
-        )
-      ),
-      partner_info = partner_info,
-      n_work_packages = N_WORK_PACKAGES
-    )
+  # Upload updated files to Nextcloud
+  kwb.budget::upload_files(xls_file, PATHS_CLOUD$BUDGET_SUMMARY)
 
-    # Write costs to an Excel file
-    xls_file <- write_costs_to_excel(costs, file.path(
-      PATHS_LOCAL$BUDGET_SUMMARY, "partner-budget.xlsx"
-    ))
+  # Update file-info.csv
+  readr::write_csv(file_info_new, path = PATHS_LOCAL$FILE_INFO)
 
-    kwb.utils::hsOpenWindowsExplorer(path.expand(xls_file))
-
-    # if successful -> upload new file-info.csv
-    readr::write_csv(file_info_new, path = PATHS_LOCAL$FILE_INFO)
-
-    # Upload updated files to Nextcloud
-    kwb.budget::upload_files(
-      files = c(xls_file, PATHS_LOCAL$FILE_INFO),
-      target_path = PATHS_CLOUD$BUDGET_SUMMARY
-    )
-
-  }
-
-  # Test: Open directory in Windows Explorer
-  kwb.utils::hsOpenWindowsExplorer(normalizePath(PATHS_LOCAL$BUDGET_SUMMARY))
+  # Upload file-info.csv to Nextcloud (?)
+  #kwb.budget::upload_files(PATHS_LOCAL$FILE_INFO, PATHS_CLOUD$BUDGET_SUMMARY)
 }
 
 # ANALYSIS ---------------------------------------------------------------------
