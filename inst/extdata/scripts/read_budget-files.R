@@ -31,14 +31,6 @@ PATHS_LOCAL <- kwb.utils::resolve(
 
 PARTNER_INFO_SHEET_NAME <- "Partners-PIC-Main contact"
 
-PARTNER_INFO_COLUMNS <- c(
-  "partner_id",
-  "partner_name_short",
-  "partner_type",
-  "partner_sector",
-  "country"
-)
-
 N_WORK_PACKAGES <- 7L
 FILES_CHANGED <- FALSE
 
