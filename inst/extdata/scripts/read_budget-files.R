@@ -264,41 +264,7 @@ if (FALSE)
   grid.table(budget_merge_country)
   grid.table(budget_merge_type)
 
-  cost_matrices <- to_cost_matrices(costs_by_wp)
+  cost_matrices <- kwb.budget::to_cost_matrices(costs$by_wp)
 
   print(budget)
-}
-
-# write_costs_to_excel ---------------------------------------------------------
-write_costs_to_excel <- function(costs, file, overwrite = TRUE)
-{
-  wb <- openxlsx::createWorkbook()
-
-  for (sheet in names(costs)) {
-    content <- costs[[sheet]]
-    cols <- seq_len(ncol(content))
-    openxlsx::addWorksheet(wb, sheet)
-    openxlsx::writeData(wb, sheet = sheet, x = content)
-    openxlsx::setColWidths(wb, sheet = sheet, cols = cols, widths = "auto")
-  }
-
-  openxlsx::saveWorkbook(wb = wb, file = file, overwrite = overwrite)
-
-  invisible(file)
-}
-
-# to_cost_matrices -------------------------------------------------------------
-to_cost_matrices <- function(costs_by_wp)
-{
-  all_columns <- names(costs_by_wp)
-  first_two <- all_columns[1:2]
-
-  lapply(
-    X = stats::setNames(nm = setdiff(all_columns, first_two)),
-    FUN = function(column) {
-      costs_by_wp %>%
-        kwb.utils::selectColumns(c(first_two, column)) %>%
-        kwb.utils::countOrSum(by = first_two, sum.up = column)
-    }
-  )
 }
