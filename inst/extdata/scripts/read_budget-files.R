@@ -284,28 +284,6 @@ if (FALSE)
   print(budget)
 }
 
-# path_defined -----------------------------------------------------------------
-path_defined <- function(name)
-{
-  name %in% names(PATHS)
-}
-
-# remove_error_elements --------------------------------------------------------
-remove_error_elements <- function(x)
-{
-  # Check for errors
-  has_error <- sapply(x, kwb.utils::isTryError)
-
-  if (any(has_error)) {
-    kwb.utils::printIf(TRUE, has_error)
-    print(table(has_error))
-    message("Removing ", sum(has_error), " elements with errors")
-  }
-
-  # Exclude elements that caused errors
-  x[!has_error]
-}
-
 # write_costs_to_excel ---------------------------------------------------------
 write_costs_to_excel <- function(costs, file, overwrite = TRUE)
 {
@@ -322,72 +300,6 @@ write_costs_to_excel <- function(costs, file, overwrite = TRUE)
   openxlsx::saveWorkbook(wb = wb, file = file, overwrite = overwrite)
 
   invisible(file)
-}
-
-# upload_files -----------------------------------------------------------------
-upload_files <- function(files, target_path)
-{
-  files_there <- kwb.nextcloud::list_files(target_path)
-
-  skip <- basename(files) %in% files_there
-
-  if (any(skip)) {
-    message(
-      "Excluding ", sum(skip), " files from upload in order not to overwrite ",
-      "files:\n",
-      paste("-", basename(files[skip]), collapse = "\n")
-    )
-  }
-
-  for (file in files[!skip]) {
-    kwb.nextcloud::upload_file(file, target_path)
-  }
-}
-
-# check_if_updated -------------------------------------------------------------
-check_if_updated <- function(file_info_latest, file_info_old)
-{
-  is_updated <- FALSE
-
-  select_cols <- c("fileid", "file", "lastmodified")
-
-  file_comparsion <- dplyr::full_join(
-    file_info_latest[select_cols],
-    file_info_old[select_cols],
-    by = "fileid"
-  ) %>%
-    dplyr::mutate(
-      msg = dplyr::if_else(
-        is.na(.data$file.x) & ! is.na(.data$file.y),
-        sprintf("DELETED: %s", .data$file.y),
-        dplyr::if_else(
-          ! is.na(.data$file.x) & is.na(.data$file.y),
-          sprintf("ADDED: %s", .data$file.x),
-          dplyr::if_else(
-            .data$file.x == .data$file.y,
-            "",
-            sprintf("UPDATED: %s", .data$file.x)
-          )
-        )
-      )
-    )
-
-  file_updated <-
-    file_comparsion$lastmodified.x != file_comparsion$lastmodified.y |
-    is.na(file_comparsion$lastmodified.x) |
-    is.na(file_comparsion$lastmodified.y)
-
-  if (any(file_updated)) {
-
-    message(sprintf(
-      "The following files were updated:\n\n%s",
-      paste(file_comparsion$msg[which(file_updated)], collapse = "\n")
-    ))
-
-    is_updated <- TRUE
-  }
-
-  is_updated
 }
 
 # to_cost_matrices -------------------------------------------------------------
