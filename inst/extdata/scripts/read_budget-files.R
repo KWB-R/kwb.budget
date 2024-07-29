@@ -70,21 +70,19 @@ if (FALSE)
   kwb.utils::hsOpenWindowsExplorer(dirname(local_files[1L]))
 }
 
-# Create and upload template for partner file ----------------------------------
+# Create and Upload an Excel File for Project Partner Information --------------
 if (FALSE)
 {
-  partner_info_fake <- kwb.budget:::fake_partner_info(n_partners = 5L)
-  file <- file.path(tempdir(), basename(PATHS_CLOUD$PARTNERS))
-  data <- stats::setNames(list(partner_info_fake), PARTNER_INFO_SHEET_NAME)
-  openxlsx::write.xlsx(data, file)
-  upload_files(file, dirname(PATHS_CLOUD$PARTNERS))
+  file <- kwb.budget::create_partner_template_xls(n_partners = 5L)
+  kwb.utils::hsOpenWindowsExplorer(file)
+  kwb.budget::upload_files(file, dirname(PATHS_CLOUD$PARTNERS))
 }
 
 # Create Budget Files per Partner ----------------------------------------------
 if (FALSE)
 {
   # Download and read Excel file with metadata about the project partners
-  partner_info_cloud <- kwb.budget::read_partner_info(
+  partner_info <- kwb.budget::read_partner_info(
     nextcloud_path = PATHS_CLOUD$PARTNERS,
     sheet = PARTNER_INFO_SHEET_NAME,
     columns = NULL
