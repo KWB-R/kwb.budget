@@ -37,6 +37,53 @@ On Nextcloud, create a password for an application to login:
 Provide user name and password as retrieved above to environment variables 
 `NEXTCLOUD_USER` and `NEXTCLOUD_PASSWORD`, respectively.
 
+## Example Workflow
+
+```{r}
+# Define paths
+CLOUD_PATH_FORMS <- "proposals_external/2024_EU_Twin_Transition/20_stage_2/60_budget/filled_out_forms"
+CLOUD_PATH_PARTNERS <- "proposals_external/2024_EU_Twin_Transition/20_stage_2/20_partners/project-partners_test.xlsx"
+CLOUD_PATH_SUMMARY_FILES <- "proposals_external/2024_EU_Twin_Transition/20_stage_2/60_budget/summary_files"
+LOCAL_PATH_SUMMARY <- "~/Projekte/2024_EU_Twin_Transition/stage_2/60_budget/summary_files/partner-budget.xlsx"
+
+# Download budget files from Nextcloud
+budget_files <- kwb.budget::download_matching_files(
+  path = CLOUD_PATH_FORMS, 
+  pattern = "budget_.*\\.xlsx$"
+)
+
+# Number of work packages
+n_work_packages <- 7L
+
+# Read raw data
+costs_list <- kwb.budget::read_partners_budget_from_excel(
+  files = budget_files,
+  n_work_packages = n_work_packages
+)
+
+# Get metadata about the project partners
+partner_info <- kwb.budget::read_partner_info(
+  nextcloud_path = CLOUD_PATH_PARTNERS,
+  sheet = "Partners-PIC-Main contact"
+)
+
+# Create cost summaries
+cost_summaries <- kwb.budget:::get_all_cost_sheets(
+  kwb.budget:::remove_error_elements(costs_list),
+  partner_info = partner_info,
+  n_work_packages = n_work_packages
+)
+
+# Write costs to an Excel file
+xls_file <- kwb.budget:::write_to_excel(cost_summaries, LOCAL_PATH_SUMMARY)
+
+# Open Excel File
+#kwb.utils::hsOpenWindowsExplorer(path.expand(xls_file))
+
+# Upload updated files to Nextcloud
+kwb.budget::upload_files(xls_file, CLOUD_PATH_SUMMARY_FILES)
+```
+
 ## List files on Nextcloud
 
 ```{r}
@@ -90,53 +137,6 @@ budgets <- kwb.budget::read_partners_budget_from_excel(
   files = local_files, 
   run_parallel = FALSE
 )
-```
-
-## Download files from Nextcloud
-
-```{r}
-CLOUD_PATH_FORMS <- "proposals_external/2024_EU_Twin_Transition/20_stage_2/60_budget/filled_out_forms"
-CLOUD_PATH_PARTNERS <- "proposals_external/2024_EU_Twin_Transition/20_stage_2/20_partners/project-partners_test.xlsx"
-CLOUD_PATH_SUMMARY_FILES <- "proposals_external/2024_EU_Twin_Transition/20_stage_2/60_budget/summary_files"
-
-LOCAL_PATH_SUMMARY <- "~/Projekte/2024_EU_Twin_Transition/stage_2/60_budget/summary_files/partner-budget.xlsx"
-
-# Download budget files from Nextcloud
-budget_files <- kwb.budget::download_matching_files(
-  path = CLOUD_PATH_FORMS, 
-  pattern = "budget_.*\\.xlsx$"
-)
-
-# Number of work packages
-n_work_packages <- 7L
-
-# Read raw data
-costs_list <- kwb.budget::read_partners_budget_from_excel(
-  files = budget_files,
-  n_work_packages = n_work_packages
-)
-
-# Get metadata about the project partners
-partner_info <- kwb.budget::read_partner_info(
-  nextcloud_path = CLOUD_PATH_PARTNERS,
-  sheet = "Partners-PIC-Main contact"
-)
-
-# Create cost summaries
-cost_summaries <- kwb.budget:::get_all_cost_sheets(
-  kwb.budget:::remove_error_elements(costs_list),
-  partner_info = partner_info,
-  n_work_packages = n_work_packages
-)
-
-# Write costs to an Excel file
-xls_file <- kwb.budget:::write_to_excel(cost_summaries, LOCAL_PATH_SUMMARY)
-
-# Open Excel File
-#kwb.utils::hsOpenWindowsExplorer(path.expand(xls_file))
-
-# Upload updated files to Nextcloud
-kwb.budget::upload_files(xls_file, CLOUD_PATH_SUMMARY_FILES)
 ```
 
 ## TODO
