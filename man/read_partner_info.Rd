@@ -4,13 +4,7 @@
 \alias{read_partner_info}
 \title{Read Information on Project Partners from (Downloaded) Excel file}
 \usage{
-read_partner_info(
-  nextcloud_path,
-  sheet,
-  local_path = NULL,
-  columns = c("partner_id", "partner_name_short", "partner_name_legal", "pic",
-    "funding_rate")
-)
+read_partner_info(nextcloud_path, sheet, local_path = NULL, columns = NULL)
 }
 \arguments{
 \item{nextcloud_path}{path to Excel file on nextcloud}
@@ -20,9 +14,7 @@ read_partner_info(
 \item{local_path}{if given, the Excel file is read from this (local) path}
 
 \item{columns}{vector of column names. If given, only these columns are
-returned. The default is this vector of required column names:
-\code{c("partner_id", "partner_name_short", "partner_name_legal", "pic",
- "funding_rate")}}
+returned.}
 }
 \value{
 data frame with attribute "local_path" being set to the path to the
