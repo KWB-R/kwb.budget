@@ -12,7 +12,7 @@ GRAMMAR <- list(
   FILE_INFO = "<BUDGET_SUMMARY>/<FILE_NAME_FILE_INFO>",
   FILE_NAME_FILE_INFO = "<PRJ>_file-info.csv",
   FILE_NAME_TEMPLATE = "AI_Liner_Partner_Budget_Example.xlsx",
-  FILE_NAME_PARTNERS = "partners_test.xlsx"
+  FILE_NAME_PARTNERS = "project-partners_test.xlsx"
 )
 
 GRAMMAR_PROJECT <- kwb.utils::resolve(
@@ -97,14 +97,13 @@ if (FALSE)
   output_files <- kwb.budget::create_partners_budget_files(
     partner_info = partner_info,
     path_budget_template = path_budget_template,
-    target_dir = file.path(tempdir(), "abc"),
     set_values = TRUE
   )
 
   # Open folder locally in Windows Explorer
   #kwb.utils::hsOpenWindowsExplorer(dirname(output_files[1L]))
 
-  upload_files(files = output_files, target_path = PATHS_CLOUD$BUDGET_FORMS)
+  kwb.budget::upload_files(output_files, PATHS_CLOUD$BUDGET_FORMS)
 
   # Manually modify EXCEL files
 
@@ -118,14 +117,9 @@ if (FALSE)
 if (FALSE)
 {
   # List budget files that are available on Nextcloud
-  cloud_budget_files <- kwb.nextcloud::list_files(
+  file_info_new <- kwb.nextcloud::list_files(
     path = PATHS_CLOUD$BUDGET_FORMS,
     full_info = TRUE
-  )
-
-  # Download budget files from Nextcloud
-  local_budget_files <- kwb.nextcloud::download_files(
-    hrefs = cloud_budget_files$href
   )
 
   local_file_info <- PATHS_LOCAL$FILE_INFO
@@ -134,13 +128,11 @@ if (FALSE)
     readr::read_csv(local_file_info)
   } else {
     kwb.utils::createDirectory(dirname(local_file_info), dbg = FALSE)
-    readr::write_csv(cloud_budget_files, file = local_file_info)
-    cloud_budget_files
+    readr::write_csv(file_info_new, file = local_file_info)
+    file_info_new
   }
 
-  file_info_latest <- cloud_budget_files
-
-  if (!check_if_updated(file_info_latest, file_info_old)) {
+  if (!files_have_changed(file_info_new, file_info_old)) {
 
     message(
       "Going to sleep, because I have nothing to do! (budget files on ",
@@ -159,51 +151,44 @@ if (FALSE)
     # Get information on costs from input files and create all different cost
     # views as a list of data frames
 
-    # Filter for Excel files
-    budget_files <- grep("\\.xlsx$", local_budget_files, value = TRUE)
-
-    if (FALSE) {
-      kwb.budget::read_partner_budget_from_excel(
-        file = budget_files[1L],
-        n_work_packages = 7L
-      )
-    }
-
-    costs_list <- kwb.budget::read_partners_budget_from_excel(
-      budget_files,
-      n_work_packages = N_WORK_PACKAGES,
-      run_parallel = FALSE
-    )
+    # Download budget files from Nextcloud
+    local_budget_files <- kwb.nextcloud::download_files(file_info_new$href)
 
     # There are warnings: "No data found on worksheet.", why?
-    costs_list <- remove_error_elements(costs_list)
 
+    # Create and upload summary
     costs <- kwb.budget:::get_all_cost_sheets(
-      costs_list,
+      costs_list = kwb.budget:::remove_error_elements(
+        kwb.budget::read_partners_budget_from_excel(
+          files = grep("\\.xlsx$", local_budget_files, value = TRUE),
+          n_work_packages = N_WORK_PACKAGES,
+          run_parallel = FALSE
+        )
+      ),
       partner_info = partner_info,
       n_work_packages = N_WORK_PACKAGES
     )
 
-    # Create and upload summary
-
     # Write costs to an Excel file
-    write_costs_to_excel(costs, file = PATHS_LOCAL$BUDGET_SUMMARY)
+    xls_file <- write_costs_to_excel(costs, file.path(
+      PATHS_LOCAL$BUDGET_SUMMARY, "partner-budget.xlsx"
+    ))
 
-    ## 2) if successful -> upload new file-info.csv
-    readr::write_csv(file_info_latest, path = PATHS_LOCAL$FILE_INFO)
+    kwb.utils::hsOpenWindowsExplorer(path.expand(xls_file))
+
+    # if successful -> upload new file-info.csv
+    readr::write_csv(file_info_new, path = PATHS_LOCAL$FILE_INFO)
 
     # Upload updated files to Nextcloud
-    upload_files(
-      files = c(PATHS_LOCAL$BUDGET_SUMMARY, PATHS_LOCAL$FILE_INFO),
+    kwb.budget::upload_files(
+      files = c(xls_file, PATHS_LOCAL$FILE_INFO),
       target_path = PATHS_CLOUD$BUDGET_SUMMARY
     )
 
   }
 
-  ### test: open directory in explorer
-  #kwb.utils::hsOpenWindowsExplorer(normalizePath(tdir_root))
-  #kwb.utils::hsOpenWindowsExplorer(normalizePath(LOCAL_BUDGET_SUMMARY))
-
+  # Test: Open directory in Windows Explorer
+  kwb.utils::hsOpenWindowsExplorer(normalizePath(PATHS_LOCAL$BUDGET_SUMMARY))
 }
 
 # ANALYSIS ---------------------------------------------------------------------
